@@ -23,12 +23,12 @@ chmod 744 $1/bootstrap.sh
 echo "ACLOCAL_AMFLAGS = -I .buildutils/m4
 
 bin_PROGRAMS = $1
-$1_SOURCES = src/main.cpp
+$1_SOURCES = src/main.cpp 
 " > $1/Makefile.am
 
 # Configure.sh
 echo "AC_PREREQ([2.63])
-AC_INIT($1,[v0.1],[example@test.domain],[$1])
+AC_INIT($1,[v0.1],[gaurav.sinharay@swansea.ac.uk],[$1])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -136,12 +136,21 @@ int main(int argc, char *argv[])
 }
 " > $1/src/main.cpp
 
+FILE=./NerscToIldgConverter.cc
+if [ -f "$FILE" ]; then
+    echo "copying $FILE into $1/src/main.cpp"
+    cp $FILE $1/src/main.cpp
+else 
+    echo "$FILE does not exist."
+fi
 
 echo "Usage:
 ./bootstrap
 mkdir build; cd build
 ../configure --with-grid=<path/to/grid> --prefix=<path/to/install/to> <any other configuration options, e.g. CXX>
 make
+[gaurav]
+i needed to also do ./config.status after configure to generate the Makefile
 " > $1/README.md
 
 echo "Template successfully generated."

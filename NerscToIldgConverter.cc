@@ -89,30 +89,30 @@ int main (int argc, char ** argv)
   FloatingPointFormat fp64_fmt = FloatingPointFormat::IEEE64BIG;
   FloatingPointFormat fp32_fmt = FloatingPointFormat::IEEE32BIG;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
-  std::cout <<GridLogMessage<<"** Writing out ILDG cfg  ****"<<std::endl;
+  std::cout <<GridLogMessage<<"** Writing out ILDG CFG  ****"<<std::endl;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   IldgWriter _IldgWriter(Grid.IsBoss());
 
-  std::string ildg_prefix = "ildg_copy_";
-  std::string ildg_file(ildg_prefix+argv[1]);
+  std::string ildg_suffix = ".ildg_copy";
+  std::string ildg_file(argv[1]+ildg_suffix);
  _IldgWriter.open(ildg_file);
 
-  if( header.data_type.compare(5,2,"SU") ) {
+  if( GridCmdOptionExists(argv, argv+argc, "--SU") ) {
     std::cout<<GridLogMessage<< "Writing SU fields" << std::endl;
-  if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
-    std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
-      if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
-        int precision;
-        std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
-        GridCmdOptionInt(arg, precision);
-        assert(precision==32 || precision==64);
-        if(precision==32) { 
-          writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
-        }
-        } else {
+    if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
+      std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
+        if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
+          int precision;
+          std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
+          GridCmdOptionInt(arg, precision);
+          assert(precision==32 || precision==64);
+          if(precision==32) { 
+            writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+          }
+          } else {
           writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
-        }
-  } else {
+          }
+    } else {
       std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
       if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
         int precision;
@@ -125,7 +125,7 @@ int main (int argc, char ** argv)
         } else {
           writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
         }
-  }
+    }
   } else if( GridCmdOptionExists(argv, argv+argc, "--Sp") ) {
     std::cout<<GridLogMessage<< "Writing Sp fields" << std::endl;
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
@@ -137,7 +137,6 @@ int main (int argc, char ** argv)
           assert(precision==32 || precision==64);
           if(precision==32) { 
             writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
-          }
           } else {
             writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
@@ -150,12 +149,14 @@ int main (int argc, char ** argv)
           assert(precision==32 || precision==64);
           if(precision==32) { 
             writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
-          }
           } else {
             writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
+        }
+      }
     }
   }
+
 
 // check everything is fine with a --check option?
 /*

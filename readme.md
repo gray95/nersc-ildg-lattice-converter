@@ -14,3 +14,8 @@ If you add new cpp files, don't forget to add them to the Makefile.am, and if yo
 
 Best,
 Ryan
+
+[extra notes]
+> make sure you have 'make install'-ed Grid beforehand. you will need this to set the
+  '--with-grid=' flag.
+
