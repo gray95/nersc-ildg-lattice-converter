@@ -16,13 +16,13 @@ The core program resides in `NerscToIldgConverter.cc`. Once compiled against Gri
 `./NameOfApplication <path-to-nersc-lattice> [grid-options]`
 
 Options include
-`--grid` Specifies the dimensions of the lattice in lattice units.
-`--precision` Specifiy 32 bit or 64 bit ouptut precision.
-`--reduce` Use when conversion to reduced format lattice is required.
+`--grid` Specifies the dimensions of the lattice in lattice units.\
+`--precision` Specifiy 32 bit or 64 bit ouptut precision.\
+`--reduce` Use when conversion to reduced format lattice is required.\
 
 ## To Do 
 - [ ] Add a `--group` option to specify the gauge group (SU or Sp at present).
-- [ ] Add a `--ouput` option to specify the dest path.
+- [ ] Add an `--ouput` option to specify the dest path.
 
 
 
