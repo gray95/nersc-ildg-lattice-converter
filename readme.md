@@ -11,10 +11,18 @@ Note: Make sure you have `make install`-ed Grid beforehand. Currently only [my f
 If you add new cpp files, don't forget to add them to the Makefile.am.
 
 ## Grid program
-The core program resides in `NerscToIldgConverter.cc`
+The core program resides in `NerscToIldgConverter.cc`. Once compiled against Grid it can be run like so
+
+`./NameOfApplication <path-to-nersc-lattice> [grid-options]`
+
+Options include
+`--grid` Specifies the dimensions of the lattice in lattice units.
+`--precision` Specifiy 32 bit or 64 bit ouptut precision.
+`--reduce` Use when conversion to reduced format lattice is required.
 
 ## To Do 
-- [] Add a `--group` Grid cmd line option.
+- [ ] Add a `--group` option to specify the gauge group (SU or Sp at present).
+- [ ] Add a `--ouput` option to specify the dest path.
 
 
 
