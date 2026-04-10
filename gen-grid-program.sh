@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
 }
 " > $1/src/main.cpp
 
-FILE=./NerscToIldgConverter.cc
+FILE=./NerscToIldgConverter.cpp
 if [ -f "$FILE" ]; then
     echo "copying $FILE into $1/src/main.cpp"
     cp $FILE $1/src/main.cpp
@@ -149,8 +149,8 @@ echo "Usage:
 mkdir build; cd build
 ../configure --with-grid=<path/to/grid> --prefix=<path/to/install/to> <any other configuration options, e.g. CXX>
 make
-[gaurav]
-i needed to also do ./config.status after configure to generate the Makefile
+
+note: I needed to also do ./config.status after configure to generate the Makefile
 " > $1/README.md
 
 echo "Template successfully generated."
