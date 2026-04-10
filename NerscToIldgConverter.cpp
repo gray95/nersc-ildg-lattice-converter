@@ -30,7 +30,6 @@ Author: Gaurav Ray <gaurav.sinharay@swansea.ac.uk>
     /*  END LEGAL */
 #include <Grid/Grid.h>
 
-//using namespace std;
 using namespace Grid;
 
 ///////////////////////////////////////////////////////////////
@@ -68,6 +67,18 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
   std::cout <<GridLogMessage<< " main "<<std::endl;
 
+  // must specify group
+  if ( !GridCmdOptionExists(argv, argv+argc, "--group") ) {
+    std::cout << GridLogError << "Must specify gauge group" << std::endl;
+    exit(1);
+  }
+
+  std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
+  if ( grp_arg!="SU" && grp_arg!="Sp" ) {
+    std::cout << GridLogError << "Group must be SU or Sp" << std::endl;
+    exit(1);
+  }
+
   using stats = PeriodicGaugeStatistics;
 
   Coordinate simd_layout = GridDefaultSimd(4,vComplex::Nsimd());
@@ -99,7 +110,8 @@ int main (int argc, char ** argv)
   std::string ildg_file(argv[1]+ildg_suffix);
  _IldgWriter.open(ildg_file);
 
-  if( GridCmdOptionExists(argv, argv+argc, "--SU") ) {
+
+  if( grp_arg == "SU" ) {
     std::cout<<GridLogMessage<< "Writing SU fields" << std::endl;
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
@@ -111,9 +123,9 @@ int main (int argc, char ** argv)
           if(precision==32) { 
             writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
           }
-          } else {
+        } else {
           writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
-          }
+        }
     } else {
       std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
       if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
@@ -128,7 +140,7 @@ int main (int argc, char ** argv)
           writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
         }
     }
-  } else if( GridCmdOptionExists(argv, argv+argc, "--Sp") ) {
+  } else if( grp_arg == "Sp" ) {
     std::cout<<GridLogMessage<< "Writing Sp fields" << std::endl;
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
@@ -157,8 +169,7 @@ int main (int argc, char ** argv)
         }
       }
     }
-  }
-
+  } 
 
 // check everything is fine with a --check option?
 /*
