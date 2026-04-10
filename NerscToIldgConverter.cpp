@@ -30,7 +30,7 @@ Author: Gaurav Ray <gaurav.sinharay@swansea.ac.uk>
     /*  END LEGAL */
 #include <Grid/Grid.h>
 
-using namespace std;
+//using namespace std;
 using namespace Grid;
 
 ///////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ using namespace Grid;
 // reduced format and single precision depending on 
 // the values of matrix_fmt and fp_fmt. 
 ///////////////////////////////////////////////////////////////
-template<class gaugeGroup, int N, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt>
+template<class stats, class gaugeGroup, int N, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt>
 void writeIldgConfiguration( LatticeGaugeField &Umu, GridCartesian &Grid, FieldMetaData &header, std::string file)  {
 
   if constexpr( std::is_same_v<gaugeGroup,GroupName::Sp> && N%2==1) {
@@ -56,7 +56,7 @@ void writeIldgConfiguration( LatticeGaugeField &Umu, GridCartesian &Grid, FieldM
   IldgWriter _IldgWriter(Grid.IsBoss());
   _IldgWriter.open(file);
 
-  _IldgWriter.writeConfiguration<gaugeGroup, matrix_fmt, fp_fmt>(Umu, header.sequence_number, ildg_lfn, ildg_description);
+  _IldgWriter.writeConfiguration<stats, gaugeGroup, matrix_fmt, fp_fmt>(Umu, header.sequence_number, ildg_lfn, ildg_description);
 
   _IldgWriter.close();
 
@@ -67,6 +67,8 @@ int main (int argc, char ** argv)
 #ifdef HAVE_LIME
   Grid_init(&argc,&argv);
   std::cout <<GridLogMessage<< " main "<<std::endl;
+
+  using stats = PeriodicGaugeStatistics;
 
   Coordinate simd_layout = GridDefaultSimd(4,vComplex::Nsimd());
   Coordinate mpi_layout  = GridDefaultMpi();
@@ -107,10 +109,10 @@ int main (int argc, char ** argv)
           GridCmdOptionInt(arg, precision);
           assert(precision==32 || precision==64);
           if(precision==32) { 
-            writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+            writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
           }
           } else {
-          writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
+          writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
     } else {
       std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
@@ -120,10 +122,10 @@ int main (int argc, char ** argv)
         GridCmdOptionInt(arg, precision);
         assert(precision==32 || precision==64);
         if(precision==32) { 
-          writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+          writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
         }
         } else {
-          writeIldgConfiguration<GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
+          writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
         }
     }
   } else if( GridCmdOptionExists(argv, argv+argc, "--Sp") ) {
@@ -136,9 +138,9 @@ int main (int argc, char ** argv)
           GridCmdOptionInt(arg, precision);
           assert(precision==32 || precision==64);
           if(precision==32) { 
-            writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+            writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
           } else {
-            writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
+            writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
     } else {
         std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
@@ -148,9 +150,9 @@ int main (int argc, char ** argv)
           GridCmdOptionInt(arg, precision);
           assert(precision==32 || precision==64);
           if(precision==32) { 
-            writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+            writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
           } else {
-            writeIldgConfiguration<GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
+            writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
         }
       }
