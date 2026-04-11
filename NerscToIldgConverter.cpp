@@ -67,18 +67,19 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
   std::cout <<GridLogMessage<< " main "<<std::endl;
 
+  std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
+
   // must specify group
   if ( !GridCmdOptionExists(argv, argv+argc, "--group") ) {
     std::cout << GridLogError << "Must specify gauge group" << std::endl;
     exit(1);
   }
-
-  std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
+  // and the only groups supported by Grid::IldgWriter are SU and Sp
   if ( grp_arg!="SU" && grp_arg!="Sp" ) {
     std::cout << GridLogError << "Group must be SU or Sp" << std::endl;
     exit(1);
   }
-
+  
   using stats = PeriodicGaugeStatistics;
 
   Coordinate simd_layout = GridDefaultSimd(4,vComplex::Nsimd());
@@ -97,22 +98,26 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   NerscIO::readConfiguration(Umu_nersc,header,nersc_file);
 
-  MatrixFormat full_matrix = MatrixFormat::FULL;
-  MatrixFormat  red_matrix = MatrixFormat::REDUCED;
-  FloatingPointFormat fp64_fmt = FloatingPointFormat::IEEE64BIG;
-  FloatingPointFormat fp32_fmt = FloatingPointFormat::IEEE32BIG;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   std::cout <<GridLogMessage<<"** Writing out ILDG CFG  ****"<<std::endl;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   IldgWriter _IldgWriter(Grid.IsBoss());
 
-  std::string ildg_suffix = ".ildg_copy";
-  std::string ildg_file(argv[1]+ildg_suffix);
+  std::string suffix = ".ildg_copy";
+  std::string ildg_file;
+
+  if ( GridCmdOptionExists(argv, argv+argc, "--outdir") ) {
+    std::string ildg_name = std::filesystem::path(argv[1] + suffix).filename();
+    std::filesystem::path outdir = GridCmdOptionPayload(argv, argv+argc, "--outdir");
+    ildg_file = (outdir / ildg_name).string();
+  } else {
+    ildg_file = argv[1]+suffix;
+  }
+    
  _IldgWriter.open(ildg_file);
 
-
+  // decide which template instatiation of writeConfiguration to call
   if( grp_arg == "SU" ) {
-    std::cout<<GridLogMessage<< "Writing SU fields" << std::endl;
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
         if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
@@ -126,22 +131,20 @@ int main (int argc, char ** argv)
         } else {
           writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
         }
-    } else {
-      std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
-      if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
-        int precision;
-        std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
-        GridCmdOptionInt(arg, precision);
-        assert(precision==32 || precision==64);
-        if(precision==32) { 
-          writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
-        }
-        } else {
-          writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
-        }
     }
-  } else if( grp_arg == "Sp" ) {
-    std::cout<<GridLogMessage<< "Writing Sp fields" << std::endl;
+  } else {
+    std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
+    if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
+      int precision;
+      std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
+      GridCmdOptionInt(arg, precision);
+      assert(precision==32 || precision==64);
+      if(precision==32) { 
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, header, ildg_file);
+      } else {
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
+      }
+    } else {
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
         if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
@@ -154,6 +157,7 @@ int main (int argc, char ** argv)
           } else {
             writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, header, ildg_file);
           }
+        }
     } else {
         std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
         if( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
@@ -169,24 +173,22 @@ int main (int argc, char ** argv)
         }
       }
     }
-  } 
+  }
+  // check by reading back ildg lattice and computing norm2 of the diff
+  if ( GridCmdOptionExists(argv, argv+argc, "--check") ) {
+    std::cout <<GridLogMessage<<"**************************************"<<std::endl;
+    std::cout <<GridLogMessage<<"** CHECK: Reading back ILDG cfg  *****"<<std::endl;
+    std::cout <<GridLogMessage<<"**************************************"<<std::endl;
+    IldgReader _IldgReader;
+    _IldgReader.open(ildg_file);
+    FieldMetaData new_header;
+    _IldgReader.readConfiguration<stats>(Umu_ildg,new_header);
+    _IldgReader.close();
+    
+    // check Umu_nersc and Umu_ildg match
+    std::cout <<GridLogMessage<< "norm2 Gauge Diff = "<<norm2((Umu_nersc-Umu_ildg))<<std::endl;
+  }
 
-// check everything is fine with a --check option?
-/*
-  std::cout <<GridLogMessage<<"**************************************"<<std::endl;
-  std::cout <<GridLogMessage<<"** Reading back ILDG conf    *********"<<std::endl;
-  std::cout <<GridLogMessage<<"**************************************"<<std::endl;
-  IldgReader _IldgReader;
-  _IldgReader.open(ildg_file);
-  _IldgReader.readConfiguration(Umu_ildg,header);
-  _IldgReader.close();
-  
-  // check Umu_nersc and Umu_ildg match
-  std::cout <<GridLogMessage<<"********************************************"<<std::endl;
-  std::cout <<GridLogMessage<<"Checking diff of nersc and ildg cfgs"<<std::endl;
-  std::cout <<GridLogMessage<<"********************************************"<<std::endl;
-  std::cout <<GridLogMessage<< "norm2 Gauge Diff = "<<norm2((Umu_nersc-Umu_ildg))<<std::endl;
-*/
   Grid_finalize();
 #endif
 }
