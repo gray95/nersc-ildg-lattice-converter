@@ -27,20 +27,26 @@ The core program resides in `NerscToIldgConverter.cpp`. Once compiled against `G
 `./NameOfApplication <path-to-nersc-lattice> [grid-options]`
 
 ### Options
-`--grid=Lx.Ly.Lz.Lt` Specifies the dimensions of the lattice in lattice units.\
-`--group` Specify the gauge group of the Nersc lattice.\
-`--precision` Specifiy 32 bit or 64 bit ouptut precision.\
-`--reduce` Use when conversion to reduced format lattice is required.
+| Flag        | Options       | Comments                                                 |
+| :---------: | :-----------: | :--------------------------------------------------------|
+| --grid      | Lx.Ly.Lz.Lt   | specifies the dimensions of the lattice in lattice units |
+| --group     | SU \| Sp      | specify the gauge group of the Nersc lattice             |
+| --precision | 32 \| 64      | specifiy 32 bit or 64 bit ouptut precision               |
+| --outdir    | <path/to/dir> | set dir where ILDG lattice will be written               |
+| --reduce    |               | use when conversion to reduced format lattice is required|  
+| --check     |               | compute norm squared of diff of nersc and ildg lattices  |  
 
 ### Notes
-If you add new `.cpp` files, don't forget to add them to `Makefile.am`.
+- If you add new `.cpp` files, don't forget to add them to `Makefile.am`.
 
-The value of `Nc` is fixed. If you want to shrink Sp(4) and SU(3) lattices you need to build two separate programmes, one with `../configure --with-grid=<path-to-grid-compiled-with-Nc=3>` and the other with `../configure --with-grid=<path-to-grid-compiled-with-Nc=4>`.
+- The value of `Nc` is fixed. If you want to shrink Sp(4) and SU(3) lattices you need to build two separate programmes, one with `../configure --with-grid=<path-to-grid-compiled-with-Nc=3>` and the other with `../configure --with-grid=<path-to-grid-compiled-with-Nc=4>`.
+
+- `--precision 32` sometimes leads to failed `assert`s when used in conjunction with `--check`. 
 
 ### To Do 
 - [x] Add a  `--group` option to specify the gauge group (SU or Sp at present).
-- [ ] Add an `--ouput` option to specify the dest path.
-- [ ] Add a `--check` option.
+- [x] Add an `--ouput` option to specify the dest path.
+- [x] Add a `--check` option.
 - [ ] Store provenance information in `grid-header`
 
 
