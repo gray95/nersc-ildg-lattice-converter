@@ -30,28 +30,66 @@ See the full license in the file "LICENSE" in the top level distribution directo
 /*  END LEGAL */
 
 #include <Grid/Grid.h>
-
 using namespace Grid;
 
-pugi::xml_document ProvHeader(FieldMetaData &header)
+/////////////////////////////
+// Provenance record format
+/////////////////////////////
+struct nerscProvFormat : Serializable {
+public:
+  GRID_SERIALIZABLE_CLASS_MEMBERS(nerscProvFormat,
+          std::string, original_format,
+          std::string, original_creator,
+          std::string, original_creator_hardware,
+          std::string, original_creation_date,
+          std::string, original_archive_date);
+  nerscProvFormat() {};
+};
+
+// fill in the provenance metadata
+// NerscIO::readHeader strips all whitespace.
+// This causes issues with dates so 
+// we copy the relevant code here and modify it
+// to only trim the leading whitespace.
+nerscProvFormat ProvHeader(std::string file)
 {
-  //std::ofstream fout(file,std::ios::out|std::ios::in);
-  //fout.seekp(0,std::ios::beg);
-//  dump_meta_data(field, fout);
+  nerscProvFormat nerscProvFormat_;
 
-  pugi::xml_document doc;
+  std::map<std::string,std::string> header;
+  std::string line;
 
-  pugi::xml_node node = doc.append_child("NerscProvMetaData");
+  // read the nersc header to get provenance info
+  std::ifstream fin(file);
+
+  getline(fin,line); // read one line 
+
+  removeWhitespace(line);
+
+  assert(line==std::string("BEGIN_HEADER"));
+  
+  do {
+    getline(fin,line); // read one line
+    int eq = line.find("=");
+    if(eq > 0) {
+      std::string key=line.substr(0,eq);
+      std::string val=line.substr(eq+1);
+      removeWhitespace(key);
+      // remove leading whitespace in val
+      val.erase(0, val.find_first_not_of(' '));
+      header[key] = val;
+    }
+  } while( line.find("END_HEADER") == std::string::npos );
 
   // write provenance data into header
-  node.append_child("creator").text().set("Zardoz");
-  node.append_child("creator_hardware").text().set("Linux ARM EPYC x86_64 amd64");
-  node.append_child("creation_date").text().set("Mon Apr 1 2001 12:34:07.54 BST");
-  node.append_child("archive_date").text().set("Mon Apr 1 2001 12:51:21.09 BST");
+  nerscProvFormat_.original_format           = "NERSC";
+  nerscProvFormat_.original_creator          = header["CREATOR"];
+  nerscProvFormat_.original_creator_hardware = header["CREATOR_HARDWARE"];
+  nerscProvFormat_.original_creation_date    = header["CREATION_DATE"];
+  nerscProvFormat_.original_archive_date     = header["ARCHIVE_DATE"];
 
-  //field.data_start = fout.tellp();
-  return doc;
+  return nerscProvFormat_;
 }
+
 
 ///////////////////////////////////////////////////////////////
 // this template function generates writes a lattice
@@ -60,7 +98,7 @@ pugi::xml_document ProvHeader(FieldMetaData &header)
 // the values of matrix_fmt and fp_fmt. 
 ///////////////////////////////////////////////////////////////
 template<class stats, class gaugeGroup, int N, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt>
-void writeIldgConfiguration( LatticeGaugeField &Umu, GridCartesian &Grid, FieldMetaData &header, std::string file)  {
+void writeIldgConfiguration( LatticeGaugeField &Umu, GridCartesian &Grid, FieldMetaData &header, std::string ildg_file, std::string nersc_file)  {
 
   if constexpr( std::is_same_v<gaugeGroup,GroupName::Sp> && N%2==1) {
     std::cout <<GridLogMessage<<"**************************************"<<std::endl;
@@ -73,11 +111,11 @@ void writeIldgConfiguration( LatticeGaugeField &Umu, GridCartesian &Grid, FieldM
   std::string ildg_description = "conv-from-nersc";
 
   IldgWriter _IldgWriter(Grid.IsBoss());
-  _IldgWriter.open(file);
+  _IldgWriter.open(ildg_file);
 
-  // prepend provenance data here?
-  pugi::xml_document prov_header = ProvHeader(header);
-  _IldgWriter.writeLimeObject<pugi::xml_document>(1, 1, prov_header, std::string("TestProvMetaData"), "A string");
+  // write provenance data as first LIME message.
+  nerscProvFormat prov_header = ProvHeader(nersc_file);
+  _IldgWriter.writeLimeObject(1, 1, prov_header, std::string("ProvMetaData"), "nersc-prov-data");
 
   _IldgWriter.writeConfiguration<stats, gaugeGroup, matrix_fmt, fp_fmt>(Umu, header.sequence_number, ildg_lfn, ildg_description);
 
@@ -92,8 +130,6 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<< " main "<<std::endl;
 
   std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
-  int precision;
-
   // must specify group
   if ( !GridCmdOptionExists(argv, argv+argc, "--group") ) {
     std::cout << GridLogError << "Must specify gauge group" << std::endl;
@@ -104,7 +140,9 @@ int main (int argc, char ** argv)
     std::cout << GridLogError << "Group must be SU or Sp" << std::endl;
     exit(1);
   }
+
   // default to double precision
+  int precision;
   if ( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
     std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
     GridCmdOptionInt(arg, precision);
@@ -128,7 +166,7 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"**  READING NERSC CFG  ***"<<std::endl;
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   FieldMetaData nersc_header, ildg_header;
-  NerscIO::readConfiguration(Umu_nersc,nersc_header,nersc_file);
+  NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
 
 
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
@@ -150,20 +188,21 @@ int main (int argc, char ** argv)
  _IldgWriter.open(ildg_file);
 
   // decide which template instantiation of writeConfiguration to call
+  // 8 options from {SU,SP} x {FULL,REDUCED} x {single,double}
   if( grp_arg == "SU" ) {
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing reduced format ILDG lattice" << std::endl;
       if(precision==32) { 
-        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       } else {
-        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
         }
     } else {
       std::cout<<GridLogMessage<< "Writing non-reduced format ILDG lattice" << std::endl;
       if(precision==32) { 
-        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       } else {
-        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::SU,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       }
     } 
   } else {
@@ -171,37 +210,19 @@ int main (int argc, char ** argv)
     if( GridCmdOptionExists(argv, argv+argc, "--reduce") ) {
       std::cout<<GridLogMessage<< "Writing in a reduced format" << std::endl;
       if(precision==32) { 
-        writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       } else {
-        writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+        writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       }
     } else {
     std::cout<<GridLogMessage<< "Writing in non-reduced format" << std::endl;
     if(precision==32) { 
-      writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+      writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       } else {
-      writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, ildg_header, ildg_file);
+      writeIldgConfiguration<stats,GroupName::Sp,Nc,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
       }
     }
   }
-    
-
-/* 
-    first 3 are filled by IldgWriter
-    header.ensemble_id      
-    header.ensemble_label  
-    header.sequence_number 
-    Can these go in the Grid header ?
-    header.creator         
-    header.creator_hardware
-    header.creation_date   
-    header.archive_date    
-*/
-
-  // write the original nersc header into the file as well because we
-  // want to preserve the provenance information related to the lattice
-  //NerscIO::writeHeader(nersc_header, ildg_file);
-  //writeProvHeader(nersc_header, ildg_file);
 
   // check by reading back ildg lattice and computing norm2 of the diff
   if ( GridCmdOptionExists(argv, argv+argc, "--check") ) {
@@ -221,3 +242,5 @@ int main (int argc, char ** argv)
   Grid_finalize();
 #endif
 }
+
+
