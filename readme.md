@@ -47,7 +47,8 @@ The core program resides in `NerscToIldgConverter.cpp`. Once compiled against `G
 - [x] Add a  `--group` option to specify the gauge group (SU or Sp at present).
 - [x] Add an `--ouput` option to specify the dest path.
 - [x] Add a `--check` option.
-- [ ] Store provenance information in `grid-header`
+- [x] Store provenance information in header
+- [ ] Write out Ildg catalogue file
 
 
 
