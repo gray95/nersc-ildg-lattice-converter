@@ -7,7 +7,7 @@ Included is a shell script, courtesy of Ryan Hill, that generates a basic `Grid`
 
 `$ ./gen-grid-program.sh NameOfApplication`
 
-This generates a directory called `NameOfApplication` in the current working directory, in which `NameOfApplication` can be built, and it also copies `NerscToIldgConverter.cpp` into `NameOfApplication/src/main.cpp`. The generated directory has its own `bootstrap.sh` and `autotools` scripts, alongside a `README` with instructions on how to compile the program. 
+This generates a directory called `NameOfApplication` in the current working directory, in which `NameOfApplication` can be built, and it also __hardlinks__ `NerscToIldgConverter.cpp` with `NameOfApplication/src/main.cpp`. The generated directory has its own `bootstrap.sh` and `autotools` scripts, alongside a `README` with instructions on how to compile the program. 
 
 Usage:
 ```
