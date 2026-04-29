@@ -165,9 +165,19 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   std::cout <<GridLogMessage<<"**  READING NERSC CFG  ***"<<std::endl;
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
-  FieldMetaData nersc_header, ildg_header;
+  FieldMetaData nersc_header;
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
 
+  // write nersc header to xml file
+  {
+    XmlWriter WR("ildg_catalogue_cfg_entry.xml");
+    std::cout << GridLogMessage << "writing xml" << std::endl;
+    write(WR, "NerscMetaData", nersc_header); 
+  }
+  if ( GridCmdOptionExists(argv, argv+argc, "--mdc-xml-only") ) {
+    Grid_finalize();
+    exit(0);
+  } 
 
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   std::cout <<GridLogMessage<<"** Writing out ILDG CFG  ****"<<std::endl;
