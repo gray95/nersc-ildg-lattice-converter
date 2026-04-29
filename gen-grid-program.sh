@@ -138,8 +138,8 @@ int main(int argc, char *argv[])
 
 FILE=./NerscToIldgConverter.cpp
 if [ -f "$FILE" ]; then
-    echo "copying $FILE into $1/src/main.cpp"
-    cp $FILE $1/src/main.cpp
+    echo "creating hardlink of $FILE at $1/src/main.cpp"
+    cp -l $FILE $1/src/main.cpp
 else 
     echo "$FILE does not exist."
 fi
