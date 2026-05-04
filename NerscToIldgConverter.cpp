@@ -30,66 +30,8 @@ See the full license in the file "LICENSE" in the top level distribution directo
 /*  END LEGAL */
 
 #include <Grid/Grid.h>
+#include "MetaDataTypes.h"
 using namespace Grid;
-
-/////////////////////////////
-// Provenance record format
-/////////////////////////////
-struct nerscProvFormat : Serializable {
-public:
-  GRID_SERIALIZABLE_CLASS_MEMBERS(nerscProvFormat,
-          std::string, original_format,
-          std::string, original_creator,
-          std::string, original_creator_hardware,
-          std::string, original_creation_date,
-          std::string, original_archive_date);
-  nerscProvFormat() {};
-};
-
-// fill in the provenance metadata
-// NerscIO::readHeader strips all whitespace.
-// This causes issues with dates so 
-// we copy the relevant code here and modify it
-// to only trim the leading whitespace.
-nerscProvFormat ProvHeader(std::string file)
-{
-  nerscProvFormat nerscProvFormat_;
-
-  std::map<std::string,std::string> header;
-  std::string line;
-
-  // read the nersc header to get provenance info
-  std::ifstream fin(file);
-
-  getline(fin,line); // read one line 
-
-  removeWhitespace(line);
-
-  assert(line==std::string("BEGIN_HEADER"));
-  
-  do {
-    getline(fin,line); // read one line
-    int eq = line.find("=");
-    if(eq > 0) {
-      std::string key=line.substr(0,eq);
-      std::string val=line.substr(eq+1);
-      removeWhitespace(key);
-      // remove leading whitespace in val
-      val.erase(0, val.find_first_not_of(' '));
-      header[key] = val;
-    }
-  } while( line.find("END_HEADER") == std::string::npos );
-
-  // write provenance data into header
-  nerscProvFormat_.original_format           = "NERSC";
-  nerscProvFormat_.original_creator          = header["CREATOR"];
-  nerscProvFormat_.original_creator_hardware = header["CREATOR_HARDWARE"];
-  nerscProvFormat_.original_creation_date    = header["CREATION_DATE"];
-  nerscProvFormat_.original_archive_date     = header["ARCHIVE_DATE"];
-
-  return nerscProvFormat_;
-}
-
 
 ///////////////////////////////////////////////////////////////
 // this template function generates writes a lattice
