@@ -136,12 +136,20 @@ int main(int argc, char *argv[])
 }
 " > $1/src/main.cpp
 
-FILE=./NerscToIldgConverter.cpp
-if [ -f "$FILE" ]; then
-    echo "creating hardlink of $FILE at $1/src/main.cpp"
-    cp -l $FILE $1/src/main.cpp
+SOURCE_FILE=./NerscToIldgConverter.cpp
+if [ -f "${SOURCE_FILE}" ]; then
+    echo "creating hardlink of ${SOURCE_FILE} at $1/src/main.cpp"
+    cp -l ${SOURCE_FILE} $1/src/main.cpp
 else 
-    echo "$FILE does not exist."
+    echo "${SOURCE_FILE} does not exist."
+fi
+
+HEADER_FILE=./MetaDataTypes.h
+if [ -f "${HEADER_FILE}" ]; then
+    echo "creating hardlink of ${HEADER_FILE} at $1/src/MetaDataTypes.h"
+    cp -l ${HEADER_FILE} $1/src/MetaDataTypes.h
+else 
+    echo "${HEADER_FILE} does not exist."
 fi
 
 echo "Usage:
