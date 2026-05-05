@@ -127,7 +127,8 @@ int main (int argc, char ** argv)
   // write ILDG MDC file in xml format.
   writeIldgMDCFile("mdc_entry.xml");
 
-  if ( GridCmdOptionExists(argv, argv+argc, "--mdc-xml-only") ) {
+  if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
+    std::cout << GridLogMessage << "Exiting without writing ILDG lattice" << std::endl;
     Grid_finalize();
     exit(0);
   } 
