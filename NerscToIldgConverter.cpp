@@ -111,11 +111,22 @@ int main (int argc, char ** argv)
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
 
   // write nersc header to xml file
-  {
+/*  {
     XmlWriter WR("ildg_catalogue_cfg_entry.xml");
     std::cout << GridLogMessage << "writing xml" << std::endl;
     write(WR, "NerscMetaData", nersc_header); 
   }
+
+  {
+    ildgMDCFormat ildgMDCFormat_;
+    XmlWriter WR("ildg_mdc_entry.xml");
+    std::cout << GridLogMessage << "writing xml" << std::endl;
+    write(WR, "gaugConfiguration", ildgMDCFormat_); 
+  }*/
+
+  // write ILDG MDC file in xml format.
+  writeIldgMDCFile("mdc_entry.xml");
+
   if ( GridCmdOptionExists(argv, argv+argc, "--mdc-xml-only") ) {
     Grid_finalize();
     exit(0);
