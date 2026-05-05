@@ -33,6 +33,12 @@ NAMESPACE_BEGIN(Grid);
 
 void writeIldgMDCFile(std::string outfile) {
 
+  // get the date
+  std::time_t time = std::time(nullptr);
+  char date[std::size("yyyy-mm-ddThh:mm:ssZ")];
+  std::strftime(std::data(date), std::size(date), "%FT%TZ", std::gmtime(&time));
+
+  // populate xml tree 
   pugi::xml_document mdc_file;
 
   pugi::xml_node gauge_node = mdc_file.append_child("gaugeConfiguration");
@@ -47,7 +53,7 @@ void writeIldgMDCFile(std::string outfile) {
   pugi::xml_node arEve_node = man_node.append_child("archiveHistory").append_child("archiveEvent");
   arEve_node.append_child("revisionAction").text().set("generate");
   pugi::xml_node par_node = arEve_node.append_child("participant");
-  arEve_node.append_child("date").text().set("2026-05-05T21:35:42+01:00");
+  arEve_node.append_child("date").text().set( date );
   par_node.append_child("orcid").text().set("0000-0000-0000-0000");
   par_node.append_child("name").text().set("UNKOWN");
   par_node.append_child("institution").text().set("UNKOWN");
@@ -58,9 +64,9 @@ void writeIldgMDCFile(std::string outfile) {
   mach_node.append_child("name").text().set("UNKOWN");
   mach_node.append_child("institution").text().set("UNKOWN");
   mach_node.append_child("machineType").text().set("UNKOWN");
-  code_node.append_child("name").text().set("UNKOWN");
-  code_node.append_child("version").text().set("UNKOWN");
-  code_node.append_child("date").text().set("2026-05-05T21:35:42+01:00");
+  code_node.append_child("name").text().set("GRID");
+  code_node.append_child("version").text().set("0.7.0");
+  code_node.append_child("date").text().set( date );
 
   pugi::xml_node alg_node = gauge_node.append_child("algorithm");
   pugi::xml_node param_node = alg_node.append_child("parameters").append_child("parameter");
