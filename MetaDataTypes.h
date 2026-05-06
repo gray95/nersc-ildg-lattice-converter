@@ -31,8 +31,38 @@ NAMESPACE_BEGIN(Grid);
 // ILDG MDC file format
 /////////////////////////
 
-void writeIldgMDCFile(std::string outfile) {
+// collect all the mdc info in one place
+struct ildgMDC {
+  
+  std::string part_orcid, part_name, part_institute;
+  std::string mach_name, mach_institute, mach_machineType;
+  std::string code_name, code_version, code_date;
+  std::string markov_uri, markov_series;
 
+};
+
+// gather all the user-input from the cmd line args and populate
+// an instance of ildgMDC
+ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
+  
+  ildgMDC mdcObj;
+   
+  mdcObj.part_orcid = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-orcid");
+  mdcObj.part_name = GridCmdOptionPayload(argv, argv+argc,  "--mdc-part-name");
+  mdcObj.part_institute = GridCmdOptionPayload(argv, argv+argc,  "--mdc-part-institute");
+
+  mdcObj.mach_name = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-name");
+  mdcObj.mach_institute = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-institute");
+  mdcObj.mach_machineType = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-type");
+
+
+  return mdcObj;
+}
+
+// write the mdc xml file according to the ildg schema
+void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj) {
+
+  
   // get the date
   std::time_t time = std::time(nullptr);
   char date[std::size("yyyy-mm-ddThh:mm:ssZ")];
@@ -54,7 +84,7 @@ void writeIldgMDCFile(std::string outfile) {
   arEve_node.append_child("revisionAction").text().set("generate");
   pugi::xml_node par_node = arEve_node.append_child("participant");
   arEve_node.append_child("date").text().set( date );
-  par_node.append_child("orcid").text().set("0000-0000-0000-0000");
+  par_node.append_child("orcid").text().set( mdc_obj.man_orcid.c_str() );
   par_node.append_child("name").text().set("UNKOWN");
   par_node.append_child("institution").text().set("UNKOWN");
 

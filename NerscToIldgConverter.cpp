@@ -71,12 +71,12 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
   std::cout <<GridLogMessage<< " main "<<std::endl;
 
-  std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
   // must specify group
   if ( !GridCmdOptionExists(argv, argv+argc, "--group") ) {
     std::cout << GridLogError << "Must specify gauge group" << std::endl;
     exit(1);
   }
+  std::string grp_arg = GridCmdOptionPayload(argv, argv+argc, "--group");
   // the only groups supported by Grid::IldgWriter are SU and Sp
   if ( grp_arg!="SU" && grp_arg!="Sp" ) {
     std::cout << GridLogError << "Group must be SU or Sp" << std::endl;
@@ -90,7 +90,6 @@ int main (int argc, char ** argv)
     GridCmdOptionInt(arg, precision);
     assert(precision==32 || precision==64);
   } else { precision = 64; }
-
 
   using stats = PeriodicGaugeStatistics;
 
@@ -110,22 +109,10 @@ int main (int argc, char ** argv)
   FieldMetaData nersc_header;
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
 
-  // write nersc header to xml file
-/*  {
-    XmlWriter WR("ildg_catalogue_cfg_entry.xml");
-    std::cout << GridLogMessage << "writing xml" << std::endl;
-    write(WR, "NerscMetaData", nersc_header); 
-  }
-
-  {
-    ildgMDCFormat ildgMDCFormat_;
-    XmlWriter WR("ildg_mdc_entry.xml");
-    std::cout << GridLogMessage << "writing xml" << std::endl;
-    write(WR, "gaugConfiguration", ildgMDCFormat_); 
-  }*/
-
-  // write ILDG MDC file in xml format.
-  writeIldgMDCFile("mdc_entry.xml");
+  // use command line options to write mdc file
+  ildgMDC mdc_info = gatherGridCmdOptions(argc, argv);
+  // write in xml format.
+  writeIldgMDCFile("mdc_entry.xml", mdc_info);
 
   if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
     std::cout << GridLogMessage << "Exiting without writing ILDG lattice" << std::endl;
