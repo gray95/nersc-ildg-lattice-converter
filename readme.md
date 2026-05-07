@@ -26,6 +26,24 @@ The core program resides in `NerscToIldgConverter.cpp`. Once compiled against `G
 
 `./NameOfApplication <path-to-nersc-lattice> [grid-options]`
 
+## Generating ILDG MDC file
+By default a `.xml` file is produced which also stores metadata about the cfg. There are many cmd line options that let's the user specify what goes in this mdc file.
+
+| Flag        | Options       | Comments                                                 |
+| :---------: | :-----------: | :--------------------------------------------------------|
+| --mdc-part-orcid     |    |   |
+| --mdc-part-name      |    |   |
+| --mdc-part-institute |    |   |
+| --mdc-mach-name    |    |   |
+| --mdc-mach-institute     |    |   |
+| --mdc-mach-type |    |   |
+| --mdc-code-name    |    |   |
+| --mdc-code-version     |    |   |
+| --mdc-code-date |    |   |
+| --mdc-markov-uri | | | 
+| --mdc-markov-series | | | 
+
+
 ### Options
 | Flag        | Options       | Comments                                                 |
 | :---------: | :-----------: | :--------------------------------------------------------|
