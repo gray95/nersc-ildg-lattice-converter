@@ -27,98 +27,13 @@ directory
 
 NAMESPACE_BEGIN(Grid);
 
+//nerscProvFormat ProvHeader(std::string file);
+//ildgMDC gatherGridCmdOptions(int argc, char ** argv);
+//void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov_header);
+
 /////////////////////////
 // ILDG MDC file format
 /////////////////////////
-
-// collect all the mdc info in one place
-struct ildgMDC {
-  
-  std::string part_orcid, part_name, part_institute;
-  std::string mach_name, mach_institute, mach_machineType;
-  std::string code_name, code_version, code_date;
-  std::string markov_uri, markov_series;
-
-};
-
-// gather all the user-input from the cmd line args and populate
-// an instance of ildgMDC
-ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
-  
-  ildgMDC mdcObj;
-   
-  mdcObj.part_orcid = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-orcid");
-  mdcObj.part_name = GridCmdOptionPayload(argv, argv+argc,  "--mdc-part-name");
-  mdcObj.part_institute = GridCmdOptionPayload(argv, argv+argc,  "--mdc-part-institute");
-
-  mdcObj.mach_name = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-name");
-  mdcObj.mach_institute = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-institute");
-  mdcObj.mach_machineType = GridCmdOptionPayload(argv, argv+argc,  "--mdc-mach-type");
-
-
-  return mdcObj;
-}
-
-// write the mdc xml file according to the ildg schema
-void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj) {
-
-  
-  // get the date
-  std::time_t time = std::time(nullptr);
-  char date[std::size("yyyy-mm-ddThh:mm:ssZ")];
-  std::strftime(std::data(date), std::size(date), "%FT%TZ", std::gmtime(&time));
-
-  // populate xml tree 
-  pugi::xml_document mdc_file;
-
-  pugi::xml_node gauge_node = mdc_file.append_child("gaugeConfiguration");
-
-  pugi::xml_attribute attr = gauge_node.append_attribute("xmlns");
-  attr.set_value("http://www.lqcd.org/ildg/QCDml/config2.0");
-
-  // write provenance data into header
-  gauge_node.append_child("dataLFN").text().set("lfn://[...]");
-
-  pugi::xml_node man_node = gauge_node.append_child("management");
-  pugi::xml_node arEve_node = man_node.append_child("archiveHistory").append_child("archiveEvent");
-  arEve_node.append_child("revisionAction").text().set("generate");
-  pugi::xml_node par_node = arEve_node.append_child("participant");
-  arEve_node.append_child("date").text().set( date );
-  par_node.append_child("orcid").text().set( mdc_obj.man_orcid.c_str() );
-  par_node.append_child("name").text().set("UNKOWN");
-  par_node.append_child("institution").text().set("UNKOWN");
-
-  pugi::xml_node impl_node = gauge_node.append_child("implementation");
-  pugi::xml_node mach_node = impl_node.append_child("machine");
-  pugi::xml_node code_node = impl_node.append_child("code");
-  mach_node.append_child("name").text().set("UNKOWN");
-  mach_node.append_child("institution").text().set("UNKOWN");
-  mach_node.append_child("machineType").text().set("UNKOWN");
-  code_node.append_child("name").text().set("GRID");
-  code_node.append_child("version").text().set("0.7.0");
-  code_node.append_child("date").text().set( date );
-
-  pugi::xml_node alg_node = gauge_node.append_child("algorithm");
-  pugi::xml_node param_node = alg_node.append_child("parameters").append_child("parameter");
-  param_node.append_child("name").text().set("nSkip");
-  param_node.append_child("value").text().set("2");
-
-  gauge_node.append_child("precision").text().set("single");
-
-  pugi::xml_node markov_node = gauge_node.append_child("markovSequence");
-  markov_node.append_child("markovChainURI").text().set("UNKOWN");
-  markov_node.append_child("series").text().set("UNKOWN");
-  pugi::xml_node mark_step_node = markov_node.append_child("markovStep");
-  mark_step_node.append_child("update").text().set("UNKOWN");
-  pugi::xml_node rec_node = mark_step_node.append_child("record");
-  rec_node.append_child("field").text().set("sp4gauge");
-  rec_node.append_child("crcCheckSum").text().set("UNKOWN");
-  rec_node.append_child("avePlaquette").text().set("5.750146e-01");
-
-  // write out xml file
-  std::cout << GridLogMessage << "Saving ILDG MDC file..." << mdc_file.save_file(outfile.c_str()) << std::endl;
-
-}
 
 /////////////////////////////
 // Provenance record format
@@ -133,6 +48,121 @@ public:
           std::string, original_archive_date);
   nerscProvFormat() {};
 };
+
+// collect all the mdc info in one place
+struct ildgMDC {
+  
+  std::string dataLFN;
+  std::string part_orcid, part_name, part_institute;
+  std::string mach_name, mach_institute, mach_type;
+  std::string code_name, code_version, code_date;
+  std::string markov_uri, markov_series;//, markov_update;
+  std::string markov_field;//, markov_crc_csum;// markov_plaq;
+
+  long int markov_update;
+  unsigned long int markov_crc_csum;
+  double markov_plaq;
+
+  // read these from nersc header
+  std::string arEvent_revAction;
+  std::string gauge_precision;
+};
+
+// gather all the user-input from the cmd line args and populate
+// an instance of ildgMDC
+ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
+  
+  ildgMDC mdcObj{};
+   
+  mdcObj.dataLFN        = GridCmdOptionPayload(argv, argv+argc, "--mdc-data-lfn");
+  
+  mdcObj.part_orcid     = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-orcid");
+  mdcObj.part_name      = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-name");
+  mdcObj.part_institute = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-institute");
+
+  mdcObj.mach_name        = GridCmdOptionPayload(argv, argv+argc, "--mdc-mach-name");
+  mdcObj.mach_institute   = GridCmdOptionPayload(argv, argv+argc, "--mdc-mach-institute");
+  mdcObj.mach_type        = GridCmdOptionPayload(argv, argv+argc, "--mdc-mach-type");
+  
+  if (!GridCmdOptionExists(argv, argv+argc, "--mdc-code-name")) {
+    mdcObj.code_name = "Grid";
+  } else {
+    mdcObj.code_name = GridCmdOptionPayload(argv, argv+argc, "--mdc-code-name");
+  }
+  
+  mdcObj.code_version = GridCmdOptionPayload(argv, argv+argc, "--mdc-code-version");
+  mdcObj.code_date    = GridCmdOptionPayload(argv, argv+argc, "--mdc-code-date");
+
+  mdcObj.markov_uri    = GridCmdOptionPayload(argv, argv+argc, "--mdc-markov-uri");
+  if (!GridCmdOptionExists(argv, argv+argc, "--mdc-markov-series")) {
+    mdcObj.markov_series = "1";
+  } else {
+    mdcObj.markov_series = GridCmdOptionPayload(argv, argv+argc, "--mdc-markov-series");
+  }
+
+  return mdcObj;
+}
+
+// write the mdc xml file according to the ildg schema
+void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov_header) {
+  
+  mdc_obj.arEvent_revAction = "generate";
+
+  std::string creation_date = prov_header.original_creation_date;
+
+  // populate xml tree 
+  pugi::xml_document mdc_file;
+
+  pugi::xml_node gauge_node = mdc_file.append_child("gaugeConfiguration");
+
+  pugi::xml_attribute attr = gauge_node.append_attribute("xmlns");
+  attr.set_value("http://www.lqcd.org/ildg/QCDml/config2.0");
+
+  // write provenance data into header
+  gauge_node.append_child("dataLFN").text().set( mdc_obj.dataLFN.c_str() );
+
+  pugi::xml_node man_node = gauge_node.append_child("management");
+  pugi::xml_node arEve_node = man_node.append_child("archiveHistory").append_child("archiveEvent");
+  arEve_node.append_child("revisionAction").text().set( mdc_obj.arEvent_revAction.c_str() );
+  pugi::xml_node par_node = arEve_node.append_child("participant");
+  arEve_node.append_child("date").text().set( creation_date.c_str() );
+  par_node.append_child("orcid").text().set( mdc_obj.part_orcid.c_str() );
+  par_node.append_child("name").text().set( mdc_obj.part_name.c_str() );
+  par_node.append_child("institution").text().set( mdc_obj.part_institute.c_str() );
+
+  pugi::xml_node impl_node = gauge_node.append_child("implementation");
+  pugi::xml_node mach_node = impl_node.append_child("machine");
+  pugi::xml_node code_node = impl_node.append_child("code");
+  mach_node.append_child("name").text().set( mdc_obj.mach_name.c_str() );
+  mach_node.append_child("institution").text().set( mdc_obj.mach_institute.c_str() );
+  mach_node.append_child("machineType").text().set( mdc_obj.mach_type.c_str() );
+
+  code_node.append_child("name").text().set( mdc_obj.code_name.c_str() );
+  code_node.append_child("version").text().set( mdc_obj.code_version.c_str() );
+  code_node.append_child("date").text().set( mdc_obj.code_date.c_str() );
+/*
+  pugi::xml_node alg_node = gauge_node.append_child("algorithm");
+  pugi::xml_node param_node = alg_node.append_child("parameters").append_child("parameter");
+  param_node.append_child("name").text().set("UNKOWN-PARAM");
+  param_node.append_child("value").text().set("UNKOWN-VALUE");
+*/
+  gauge_node.append_child("precision").text().set( mdc_obj.gauge_precision.c_str() );
+
+  pugi::xml_node markov_node = gauge_node.append_child("markovSequence");
+  markov_node.append_child("markovChainURI").text().set( mdc_obj.markov_uri.c_str() );
+  markov_node.append_child("series").text().set( mdc_obj.markov_series.c_str() );
+  pugi::xml_node mark_step_node = markov_node.append_child("markovStep");
+  mark_step_node.append_child("update").text().set( mdc_obj.markov_update );
+  pugi::xml_node rec_node = mark_step_node.append_child("record");
+  rec_node.append_child("field").text().set( mdc_obj.markov_field.c_str() );
+  rec_node.append_child("crcCheckSum").text().set( mdc_obj.markov_crc_csum );
+  rec_node.append_child("avePlaquette").text().set( mdc_obj.markov_plaq );
+
+  // write out xml file
+  std::cout << GridLogMessage << "Saving ILDG MDC file..." << mdc_file.save_file(outfile.c_str()) << std::endl;
+
+}
+
 
 // fill in the provenance metadata
 // NerscIO::readHeader strips all whitespace.

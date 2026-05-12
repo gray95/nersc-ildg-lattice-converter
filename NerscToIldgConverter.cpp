@@ -109,10 +109,24 @@ int main (int argc, char ** argv)
   FieldMetaData nersc_header;
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
 
+  // exit if user-defined precision is double and the nersc lattice is single
+  if( nersc_header.floating_point=="IEEE32BIG" && precision==64 ) {
+    std::cout << GridLogError << 
+    "--precision must be <= nersc precision" << std::endl;
+    exit(0);
+  } 
+ 
+  //exit(0);
+  nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   // use command line options to write mdc file
   ildgMDC mdc_info = gatherGridCmdOptions(argc, argv);
+  mdc_info.gauge_precision = (precision==32) ? "single" : "double";
+  mdc_info.markov_update   = nersc_header.sequence_number;
+  mdc_info.markov_crc_csum = nersc_header.checksum; // CHECK IF THIS IS TRUE!!!
+  mdc_info.markov_plaq     = nersc_header.plaquette;
+
   // write in xml format.
-  writeIldgMDCFile("mdc_entry.xml", mdc_info);
+  writeIldgMDCFile("mdc_entry.xml", mdc_info, nersc_prov_header);
 
   if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
     std::cout << GridLogMessage << "Exiting without writing ILDG lattice" << std::endl;
