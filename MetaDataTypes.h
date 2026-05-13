@@ -52,7 +52,7 @@ public:
 // collect all the mdc info in one place
 struct ildgMDC {
 
-  std::string filename;
+  std::string filename, creation_date;
   std::string dataLFN, revAction, gauge_precision;
   std::string part_orcid, part_name, part_institute;
   std::string mach_name, mach_institute, mach_type;
@@ -104,10 +104,50 @@ ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
   return mdcObj;
 }
 
+////////////////////////////////////////////////////////////////
+// converts datetime string to iso-8601. 
+// assumes the nersc time is a local UK time!
+////////////////////////////////////////////////////////////////
+std::string convertNerscDate( std::string nersc_date ) {
+
+  // set the locale,
+  // here we assume the nersc timestamps are in local UK time.
+  setenv("TZ", "GB", 1);
+  
+  // Initialize a tm structure to hold the parsed date
+  std::tm tm = {};
+
+  // create a string stream to parse the date string
+  std::istringstream ss(nersc_date);
+
+  // parse the date string 
+  ss >> std::get_time(&tm, "%A %B %d %H:%M:%S %Y");
+  // check if parsing was successful
+  if (ss.fail()) {
+      std::cout << "Date parsing failed!" << std::endl;
+      exit(1);
+  }
+
+  tm.tm_isdst = 1;
+  std::mktime(&tm);
+
+  char mdc_date[sizeof("yyyy-mm-ddThh:mm:ss+hh:hh")];
+
+  // convert tm object to iso-8601 format string
+  std::strftime( mdc_date, sizeof(mdc_date), "%Y-%m-%dT%H:%M:%S%z", &tm );
+
+  std::string mdc_string = std::string(mdc_date);
+  // utc time offsets like +0200 are iso8601 compliant but the
+  // ildg schema wants a colon. %H:%M
+  mdc_string.insert(22, 1, ':');
+
+  return mdc_string;
+}
+
 // write the mdc xml file according to the ildg schema
 void writeIldgMDCFile(ildgMDC mdc_obj, nerscProvFormat prov_header) {
   
-  std::string creation_date = prov_header.original_creation_date;
+  mdc_obj.creation_date = convertNerscDate(prov_header.original_creation_date);
 
   // populate xml tree 
   pugi::xml_document mdc_file;
@@ -124,7 +164,7 @@ void writeIldgMDCFile(ildgMDC mdc_obj, nerscProvFormat prov_header) {
   pugi::xml_node arEve_node = man_node.append_child("archiveHistory").append_child("archiveEvent");
   arEve_node.append_child("revisionAction").text().set( mdc_obj.revAction.c_str() );
   pugi::xml_node par_node = arEve_node.append_child("participant");
-  arEve_node.append_child("date").text().set( creation_date.c_str() );
+  arEve_node.append_child("date").text().set( mdc_obj.creation_date.c_str() );
   par_node.append_child("orcid").text().set( mdc_obj.part_orcid.c_str() );
   par_node.append_child("name").text().set( mdc_obj.part_name.c_str() );
   par_node.append_child("institution").text().set( mdc_obj.part_institute.c_str() );

@@ -116,8 +116,6 @@ int main (int argc, char ** argv)
     exit(0);
   } 
  
-  //exit(0);
-  nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   // use command line options to write mdc file
   ildgMDC mdc_info = gatherGridCmdOptions(argc, argv);
 
@@ -133,6 +131,7 @@ int main (int argc, char ** argv)
   mdc_info.filename = "mdc_test.xml";
 
   // write in xml format.
+  nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   writeIldgMDCFile(mdc_info, nersc_prov_header);
 
   if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
