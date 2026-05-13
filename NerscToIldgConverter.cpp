@@ -91,6 +91,17 @@ int main (int argc, char ** argv)
     assert(precision==32 || precision==64);
   } else { precision = 64; }
 
+  std::string suffix = ".ildg";
+  std::string ildg_file;
+
+  if ( GridCmdOptionExists(argv, argv+argc, "--outdir") ) {
+    std::string ildg_name = std::filesystem::path(argv[1] + suffix).filename();
+    std::filesystem::path outdir = GridCmdOptionPayload(argv, argv+argc, "--outdir");
+    ildg_file = (outdir / ildg_name).string();
+  } else {
+    ildg_file = argv[1]+suffix;
+  }
+ 
   using stats = PeriodicGaugeStatistics;
 
   Coordinate simd_layout = GridDefaultSimd(4,vComplex::Nsimd());
@@ -128,7 +139,7 @@ int main (int argc, char ** argv)
   std::transform(stGrp.begin(), stGrp.end(), stGrp.begin(), ::tolower);
   mdc_info.markov_field    = stGrp + std::to_string(Nc) + "gauge";
 
-  mdc_info.filename = "mdc_test.xml";
+  mdc_info.filename = ildg_file + std::string(".xml");
 
   // write in xml format.
   nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
@@ -144,19 +155,8 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"** Writing out ILDG CFG  ****"<<std::endl;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   IldgWriter _IldgWriter(Grid.IsBoss());
-
-  std::string suffix = ".ildg_copy";
-  std::string ildg_file;
-
-  if ( GridCmdOptionExists(argv, argv+argc, "--outdir") ) {
-    std::string ildg_name = std::filesystem::path(argv[1] + suffix).filename();
-    std::filesystem::path outdir = GridCmdOptionPayload(argv, argv+argc, "--outdir");
-    ildg_file = (outdir / ildg_name).string();
-  } else {
-    ildg_file = argv[1]+suffix;
-  }
-    
- _IldgWriter.open(ildg_file);
+   
+  _IldgWriter.open(ildg_file);
 
   // decide which template instantiation of writeConfiguration to call
   // 8 options from {SU,SP} x {FULL,REDUCED} x {single,double}
