@@ -120,13 +120,20 @@ int main (int argc, char ** argv)
   nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   // use command line options to write mdc file
   ildgMDC mdc_info = gatherGridCmdOptions(argc, argv);
+
   mdc_info.gauge_precision = (precision==32) ? "single" : "double";
   mdc_info.markov_update   = nersc_header.sequence_number;
   mdc_info.markov_crc_csum = nersc_header.checksum; // CHECK IF THIS IS TRUE!!!
   mdc_info.markov_plaq     = nersc_header.plaquette;
+  // convert group name to lowercase letters
+  std::string stGrp = grp_arg;
+  std::transform(stGrp.begin(), stGrp.end(), stGrp.begin(), ::tolower);
+  mdc_info.markov_field    = stGrp + std::to_string(Nc) + "gauge";
+
+  mdc_info.filename = "mdc_test.xml";
 
   // write in xml format.
-  writeIldgMDCFile("mdc_entry.xml", mdc_info, nersc_prov_header);
+  writeIldgMDCFile(mdc_info, nersc_prov_header);
 
   if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
     std::cout << GridLogMessage << "Exiting without writing ILDG lattice" << std::endl;
