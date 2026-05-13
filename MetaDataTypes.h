@@ -51,21 +51,17 @@ public:
 
 // collect all the mdc info in one place
 struct ildgMDC {
-  
-  std::string dataLFN;
+
+  std::string filename;
+  std::string dataLFN, revAction, gauge_precision;
   std::string part_orcid, part_name, part_institute;
   std::string mach_name, mach_institute, mach_type;
   std::string code_name, code_version, code_date;
-  std::string markov_uri, markov_series;//, markov_update;
-  std::string markov_field;//, markov_crc_csum;// markov_plaq;
+  std::string markov_uri, markov_field, markov_series;
 
-  long int markov_update;
-  unsigned long int markov_crc_csum;
+  //int markov_series;
+  unsigned long int markov_update, markov_crc_csum;
   double markov_plaq;
-
-  // read these from nersc header
-  std::string arEvent_revAction;
-  std::string gauge_precision;
 };
 
 // gather all the user-input from the cmd line args and populate
@@ -73,8 +69,13 @@ struct ildgMDC {
 ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
   
   ildgMDC mdcObj{};
-   
+
   mdcObj.dataLFN        = GridCmdOptionPayload(argv, argv+argc, "--mdc-data-lfn");
+  if(!GridCmdOptionExists(argv, argv+argc, "--mdc-rev-action")) {
+    mdcObj.revAction = "generate";
+  } else {
+    mdcObj.revAction = GridCmdOptionPayload(argv, argv+argc, "--mdc-rev-action");
+  }
   
   mdcObj.part_orcid     = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-orcid");
   mdcObj.part_name      = GridCmdOptionPayload(argv, argv+argc, "--mdc-part-name");
@@ -104,10 +105,8 @@ ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
 }
 
 // write the mdc xml file according to the ildg schema
-void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov_header) {
+void writeIldgMDCFile(ildgMDC mdc_obj, nerscProvFormat prov_header) {
   
-  mdc_obj.arEvent_revAction = "generate";
-
   std::string creation_date = prov_header.original_creation_date;
 
   // populate xml tree 
@@ -123,7 +122,7 @@ void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov
 
   pugi::xml_node man_node = gauge_node.append_child("management");
   pugi::xml_node arEve_node = man_node.append_child("archiveHistory").append_child("archiveEvent");
-  arEve_node.append_child("revisionAction").text().set( mdc_obj.arEvent_revAction.c_str() );
+  arEve_node.append_child("revisionAction").text().set( mdc_obj.revAction.c_str() );
   pugi::xml_node par_node = arEve_node.append_child("participant");
   arEve_node.append_child("date").text().set( creation_date.c_str() );
   par_node.append_child("orcid").text().set( mdc_obj.part_orcid.c_str() );
@@ -140,12 +139,12 @@ void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov
   code_node.append_child("name").text().set( mdc_obj.code_name.c_str() );
   code_node.append_child("version").text().set( mdc_obj.code_version.c_str() );
   code_node.append_child("date").text().set( mdc_obj.code_date.c_str() );
-/*
+
   pugi::xml_node alg_node = gauge_node.append_child("algorithm");
   pugi::xml_node param_node = alg_node.append_child("parameters").append_child("parameter");
-  param_node.append_child("name").text().set("UNKOWN-PARAM");
-  param_node.append_child("value").text().set("UNKOWN-VALUE");
-*/
+  param_node.append_child("name").text().set("UNKOWN");
+  param_node.append_child("value").text().set("UNKOWN");
+
   gauge_node.append_child("precision").text().set( mdc_obj.gauge_precision.c_str() );
 
   pugi::xml_node markov_node = gauge_node.append_child("markovSequence");
@@ -159,7 +158,8 @@ void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov
   rec_node.append_child("avePlaquette").text().set( mdc_obj.markov_plaq );
 
   // write out xml file
-  std::cout << GridLogMessage << "Saving ILDG MDC file..." << mdc_file.save_file(outfile.c_str()) << std::endl;
+  std::cout << GridLogMessage << "Saving ILDG MDC file..." << 
+    mdc_file.save_file(mdc_obj.filename.c_str()) << std::endl;
 
 }
 
