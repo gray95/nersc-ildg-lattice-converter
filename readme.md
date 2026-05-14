@@ -7,7 +7,7 @@ Included is a shell script, courtesy of Ryan Hill, that generates a basic `Grid`
 
 `$ ./gen-grid-program.sh NameOfApplication`
 
-This generates a directory called `NameOfApplication` in the current working directory, in which `NameOfApplication` can be built, and it also __hardlinks__ `NerscToIldgConverter.cpp` with `NameOfApplication/src/main.cpp`. The generated directory has its own `bootstrap.sh` and `autotools` scripts, alongside a `README` with instructions on how to compile the program. 
+This generates a directory called `NameOfApplication` in the current working directory, in which `NameOfApplication` can be built, and it also __hardlinks__ `NerscToIldgConverter.cpp` with `NameOfApplication/src/main.cpp`, and `MetaDataTypes.h` with `NameOfApplication/src/MetaDataTypes.h`. The generated directory has its own `bootstrap.sh` and `autotools` scripts, alongside a `README` with instructions on how to compile the program. 
 
 Usage:
 ```
@@ -24,26 +24,29 @@ Note: Ensure you have `make install`-ed `Grid` __beforehand__ and pass its insta
 ## Running
 The core program resides in `NerscToIldgConverter.cpp`. Once compiled against `Grid` run it
 
-`./NameOfApplication <path-to-nersc-lattice> [grid-options]`
+`./NameOfApplication <path-to-nersc-lattice> [grid-options] [mdc-options]`
 
 ## Generating ILDG MDC file
-By default a `.xml` file is produced which also stores metadata about the cfg. There are many cmd line options that let's the user specify what goes in this mdc file.
+By default a `.xml` file is produced which also stores metadata about the converted lattice. There are many cmd line options that let's the user specify what goes in this mdc file. Avoid empty cmdline args and use double quotes.  
 
-| Flag        | Options       | Comments                                                 |
-| :---------: | :-----------: | :--------------------------------------------------------|
-| --mdc-part-orcid     |    |   |
-| --mdc-part-name      |    |   |
-| --mdc-part-institute |    |   |
-| --mdc-mach-name    |    |   |
-| --mdc-mach-institute     |    |   |
-| --mdc-mach-type |    |   |
-| --mdc-code-name    |    |   |
-| --mdc-code-version     |    |   |
-| --mdc-code-date |    |   |
-| --mdc-markov-uri | | | 
-| --mdc-markov-series | | | 
+| Flag                 | Options       | Comments                                                 |
+| :------------------: | :-----------: | :--------------------------------------------------------|
+| --mdc-file-only      | None   |   |
+| --mdc-data-lfn       | usr-def   |   |
+| --mdc-rev-action     |    |   |
+| --mdc-part-orcid     | dddd-dddd-dddd-dddd   |   |
+| --mdc-part-name      | usr-def   |   |
+| --mdc-part-institute | usr-def   |   |
+| --mdc-mach-name      | usr-def   |   |
+| --mdc-mach-institute | usr-def   |   |
+| --mdc-mach-type      |    |   |
+| --mdc-code-name      |    |   |
+| --mdc-code-version   |    |   |
+| --mdc-code-date      | usr-def   |   |
+| --mdc-markov-uri     | | | 
+| --mdc-markov-series  | | | 
 
-
+The resulting mdc file can be checked against the QCDml 2.0 schema using an xml tool like `xmllint` or the python script provided by the ILDG. 
 ### Options
 | Flag        | Options       | Comments                                                 |
 | :---------: | :-----------: | :--------------------------------------------------------|
