@@ -144,13 +144,16 @@ else
     echo "${SOURCE_FILE} does not exist."
 fi
 
-HEADER_FILE=./MetaDataTypes.h
-if [ -f "${HEADER_FILE}" ]; then
-    echo "creating hardlink of ${HEADER_FILE} at $1/src/MetaDataTypes.h"
-    cp -l ${HEADER_FILE} $1/src/MetaDataTypes.h
-else 
-    echo "${HEADER_FILE} does not exist."
-fi
+declare -a HEADER_FILES=("MetaDataTypes.h" "crc32.h")
+for HEADER in "${HEADER_FILES[@]}"
+do
+  if [ -f "./${HEADER}" ]; then
+      echo "creating hardlink of ${HEADER} at $1/src/${HEADER}"
+      cp -l ${HEADER} $1/src/${HEADER}
+  else 
+      echo "${HEADER} does not exist."
+  fi
+done
 
 echo "Usage:
 ./bootstrap
