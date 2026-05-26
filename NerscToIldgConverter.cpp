@@ -31,7 +31,79 @@ See the full license in the file "LICENSE" in the top level distribution directo
 
 #include <Grid/Grid.h>
 #include "MetaDataTypes.h"
+#include "crc32.h"
 using namespace Grid;
+
+
+template<class vobj>
+uint32_t posixCRC(const Lattice<vobj> &buf)
+{
+  using sobj = typename vobj::scalar_object;
+  using dobj = LorentzColourMatrixD;
+
+  GridBase *grid = buf.Grid();
+  uint64_t lsites = grid->lSites();
+
+  std::vector<sobj> sdata(lsites);
+  std::vector<dobj> iodata(lsites);
+
+  unvectorizeToLexOrdArray(sdata, buf);
+  BinarySimpleMunger<sobj,sobj> munge;
+  thread_for( x, lsites, { munge(sdata[x],iodata[x]); } );
+
+  //grid->Barrier();
+
+  BinaryIO::htobe64_v((void *)&iodata[0], sizeof(sobj)*iodata.size());
+
+  crc32init(); 
+
+  crc32append( (unsigned char*) &iodata[0], sizeof(sobj)*iodata.size() );
+
+  return crc32finish();
+}
+
+
+template<class vobj> 
+uint32_t flatCRC(const Lattice<vobj> &buf)
+{
+  using sobj = typename vobj::scalar_object;
+  using dobj = LorentzColourMatrixD;
+
+  GridBase *grid = buf.Grid();
+  uint64_t lsites = grid->lSites();
+
+  std::vector<sobj> sdata(lsites);
+  std::vector<dobj> iodata(lsites);
+
+  unvectorizeToLexOrdArray(sdata, buf);
+  //GaugeSimpleMunger<sobj,sobj> munge;
+  BinarySimpleMunger<sobj,sobj> munge;
+  thread_for( x, lsites, { munge(sdata[x],iodata[x]); } );
+
+  //grid->Barrier();
+
+  BinaryIO::htobe64_v((void *)&iodata[0], sizeof(sobj)*iodata.size());
+  //{BinaryIO::be64toh_v((void *)&iodata[0], sizeof(sobj)*iodata.size());}
+
+  //std::cout << GridLogMessage << "iodata.size: " << sizeof(sobj)*iodata.size() << std::endl;
+  //std::cout << GridLogMessage << "sizeof(iodata): " << sizeof(iodata) << std::endl;
+
+  return ::crc32(0L, (unsigned char *)&iodata[0], sizeof(sobj)*iodata.size()) ;
+}
+
+template<class vobj> 
+void Uint32ScidacChecksum(Lattice<vobj> &lat,uint32_t &scidac_csuma,uint32_t &scidac_csumb)
+{
+  typedef typename vobj::scalar_object sobj;
+
+  GridBase *grid = lat.Grid();
+  uint64_t lsites = grid->lSites();
+
+  std::vector<sobj> scalardata(lsites);
+  unvectorizeToLexOrdArray(scalardata,lat);
+  
+  BinaryIO::ScidacChecksum(grid, scalardata, scidac_csuma, scidac_csumb);
+}
 
 ///////////////////////////////////////////////////////////////
 // this template function generates writes a lattice
@@ -112,6 +184,7 @@ int main (int argc, char ** argv)
 
   LatticeGaugeField Umu_nersc(&Grid);
   LatticeGaugeField Umu_ildg(&Grid);
+  Umu_nersc = Umu_ildg = Zero();
   
   std::string nersc_file(argv[1]);
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
@@ -119,6 +192,12 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   FieldMetaData nersc_header;
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
+
+  //uint32_t flatcrc = flatCRC( Umu_nersc);
+  //std::cout << GridLogMessage << "flatCRC(): " << flatcrc << std::endl;
+
+  uint32_t crc32_csum = posixCRC( Umu_nersc);
+  std::cout << GridLogMessage << "posixCRC(): " << crc32_csum << std::endl;
 
   // exit if user-defined precision is double and the nersc lattice is single
   if( nersc_header.floating_point=="IEEE32BIG" && precision==64 ) {
@@ -132,13 +211,12 @@ int main (int argc, char ** argv)
 
   mdc_info.gauge_precision = (precision==32) ? "single" : "double";
   mdc_info.markov_update   = nersc_header.sequence_number;
-  mdc_info.markov_crc_csum = nersc_header.checksum; // CHECK IF THIS IS TRUE!!!
+  mdc_info.markov_crc_csum = crc32_csum;
   mdc_info.markov_plaq     = nersc_header.plaquette;
   // convert group name to lowercase letters
   std::string stGrp = grp_arg;
   std::transform(stGrp.begin(), stGrp.end(), stGrp.begin(), ::tolower);
   mdc_info.markov_field    = stGrp + std::to_string(Nc) + "gauge";
-
   mdc_info.filename = ildg_file + std::string(".xml");
 
   // write in xml format.
@@ -155,7 +233,6 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"** Writing out ILDG CFG  ****"<<std::endl;
   std::cout <<GridLogMessage<<"**************************************"<<std::endl;
   IldgWriter _IldgWriter(Grid.IsBoss());
-   
   _IldgWriter.open(ildg_file);
 
   // decide which template instantiation of writeConfiguration to call
@@ -202,8 +279,8 @@ int main (int argc, char ** argv)
     std::cout <<GridLogMessage<<"**************************************"<<std::endl;
     IldgReader _IldgReader;
     _IldgReader.open(ildg_file);
-    FieldMetaData new_header;
-    _IldgReader.readConfiguration<stats>(Umu_ildg,new_header);
+    FieldMetaData check_header;
+    _IldgReader.readConfiguration<stats>(Umu_ildg, check_header);
     _IldgReader.close();
     
     // check Umu_nersc and Umu_ildg match
