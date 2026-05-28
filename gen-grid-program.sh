@@ -138,8 +138,8 @@ int main(int argc, char *argv[])
 
 SOURCE_FILE=./NerscToIldgConverter.cpp
 if [ -f "${SOURCE_FILE}" ]; then
-    echo "creating hardlink of ${SOURCE_FILE} at $1/src/main.cpp"
-    cp -l ${SOURCE_FILE} $1/src/main.cpp
+    echo "copying ${SOURCE_FILE} into $1/src/main.cpp"
+    cp ${SOURCE_FILE} $1/src/main.cpp
 else 
     echo "${SOURCE_FILE} does not exist."
 fi
@@ -148,8 +148,8 @@ declare -a HEADER_FILES=("MetaDataTypes.h" "crc32.h")
 for HEADER in "${HEADER_FILES[@]}"
 do
   if [ -f "./${HEADER}" ]; then
-      echo "creating hardlink of ${HEADER} at $1/src/${HEADER}"
-      cp -l ${HEADER} $1/src/${HEADER}
+      echo "copying ${HEADER} into $1/src/${HEADER}"
+      cp ${HEADER} $1/src/${HEADER}
   else 
       echo "${HEADER} does not exist."
   fi
