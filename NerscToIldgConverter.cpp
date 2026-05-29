@@ -179,13 +179,6 @@ int main (int argc, char ** argv)
   nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   writeIldgMDCFile(mdc_info, nersc_prov_header);
 
-  if ( GridCmdOptionExists(argv, argv+argc, "--mdc-file-only") ) {
-    std::cout << GridLogMessage << "Exiting without writing ILDG lattice" << std::endl;
-    Grid_finalize();
-    exit(0);
-  } 
-
-
   // decide which template instantiation of writeConfiguration to call
   // 8 options from {SU,SP} x {FULL,REDUCED} x {single,double}
   if (grp_arg == "SU") {

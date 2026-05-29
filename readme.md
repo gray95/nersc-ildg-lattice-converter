@@ -31,7 +31,6 @@ By default a `.xml` file is produced which also stores metadata about the conver
 
 | Flag                 | Options       | Comments                                                 |
 | :------------------: | :-----------: | :--------------------------------------------------------|
-| --mdc-file-only      | None   |   |
 | --mdc-data-lfn       | usr-def   |   |
 | --mdc-rev-action     |    |   |
 | --mdc-part-orcid     | dddd-dddd-dddd-dddd   |   |
