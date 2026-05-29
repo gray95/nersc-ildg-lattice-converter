@@ -58,11 +58,18 @@ The resulting mdc file can be checked against the QCDml 2.0 schema using an xml 
 | --check     |               | compute norm squared of diff of nersc and ildg lattices  |  
 
 ### Notes
+
+- I have found that `autotools` doesn't like `NameOfApplication`s with dashes in them. Probably best to use underscores.
+ 
 - If you add new `.cpp` files, don't forget to add them to `Makefile.am`.
 
 - The value of `Nc` is fixed. If you want to shrink Sp(4) and SU(3) lattices you need to build two separate programmes, one with `../configure --with-grid=<path-to-grid-compiled-with-Nc=3>` and the other with `../configure --with-grid=<path-to-grid-compiled-with-Nc=4>`.
 
 - `--precision 32` sometimes leads to failed `assert`s when used in conjunction with `--check`. 
+
+- Sp(2) is the same as SU(2), as a convention we use `--group SU` when processing these lattices. Some of the ildg binary checker tools don't like reduced Sp(2) fields. 
+
+- Sp(2N) is a subgroup of SU(2N), so if `Grid` writes a reduced Sp(2N) lattice thinking it is SU(2N) then it will work fine, `Grid` will be able to read and reconstruct the lattice without any extra prompting. But you just won't get the full space savings - for Sp(4) you would lose out on 50% of the potential saved disk space.
 
 ### To Do 
 - [x] Add a  `--group` option to specify the gauge group (SU or Sp at present).
