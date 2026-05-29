@@ -105,43 +105,48 @@ ildgMDC gatherGridCmdOptions(int argc, char ** argv) {
 }
 
 ////////////////////////////////////////////////////////////////
-// converts datetime string to iso-8601. 
-// assumes the nersc time is a local UK time!
+// converts nersc format datetime string to iso-8601 format
 ////////////////////////////////////////////////////////////////
 std::string convertNerscDate( std::string nersc_date ) {
-
-  // set the locale,
-  // here we assume the nersc timestamps are in local UK time.
-  setenv("TZ", "GB", 1);
-  
-  // Initialize a tm structure to hold the parsed date
-  std::tm tm = {};
 
   // create a string stream to parse the date string
   std::istringstream ss(nersc_date);
 
+  // initialize a tm structure to hold the parsed date
+  std::tm tm = {};
+
   // parse the date string 
   ss >> std::get_time(&tm, "%A %B %d %H:%M:%S %Y");
+
   // check if parsing was successful
   if (ss.fail()) {
       std::cout << "Date parsing failed!" << std::endl;
       exit(1);
   }
+  
+  // set daylight saving time according to presence of 'BST' in nersc datetime
+  std::string TZ = nersc_date.substr(nersc_date.length()-3,3);
+  if ( TZ == "BST" ) {
+    tm.tm_isdst = 1;
+  } else if ( TZ == "GMT" ) {
+    tm.tm_isdst = 0;
+  } else {
+    tm.tm_isdst = -1;
+  }
 
-  tm.tm_isdst = 1;
+  // renormalise time (just accounts for BST if needed)  
   std::mktime(&tm);
 
-  char mdc_date[sizeof("yyyy-mm-ddThh:mm:ss+hh:hh")];
+  char iso8601_date[sizeof("yyyy-mm-ddThh:mm:ss+hh:hh")];
 
   // convert tm object to iso-8601 format string
-  std::strftime( mdc_date, sizeof(mdc_date), "%Y-%m-%dT%H:%M:%S%z", &tm );
+  std::strftime( iso8601_date, sizeof(iso8601_date), "%Y-%m-%dT%H:%M:%S%z", &tm );
 
-  std::string mdc_string = std::string(mdc_date);
-  // utc time offsets like +0200 are iso8601 compliant but the
-  // ildg schema wants a colon. %H:%M
-  mdc_string.insert(22, 1, ':');
+  std::string mdc_string = std::string(iso8601_date);
 
-  return mdc_string;
+  // utc offsets +0200/+02:00 are both iso8601 compliant but the
+  // ildg schema insists on the presence of a colon.
+  return mdc_string.insert(22, 1, ':');
 }
 
 // write the mdc xml file according to the ildg schema
