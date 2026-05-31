@@ -144,15 +144,17 @@ int main (int argc, char ** argv)
  
   using stats = PeriodicGaugeStatistics;
 
+  std::string nersc_file(argv[1]);
+  std::vector<int> latt_dims = getNerscLattDims( nersc_file );
+
   Coordinate simd_layout = GridDefaultSimd(4,vComplex::Nsimd());
   Coordinate mpi_layout  = GridDefaultMpi();
-  Coordinate latt_size   = GridDefaultLatt();
+  Coordinate latt_size   = latt_dims;
    
   GridCartesian     Grid(latt_size,simd_layout,mpi_layout);
 
   LatticeGaugeField Umu_nersc(&Grid);
   
-  std::string nersc_file(argv[1]);
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   std::cout <<GridLogMessage<<"**  READING NERSC CFG  ***"<<std::endl;
   std::cout <<GridLogMessage<<"**************************"<<std::endl;

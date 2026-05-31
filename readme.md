@@ -49,7 +49,6 @@ The resulting mdc file can be checked against the QCDml 2.0 schema using an xml 
 ### Options
 | Flag        | Options       | Comments                                                 |
 | :---------: | :-----------: | :--------------------------------------------------------|
-| --grid      | Lx.Ly.Lz.Lt   | specifies the dimensions of the lattice in lattice units |
 | --group     | SU \| Sp      | specify the gauge group of the Nersc lattice             |
 | --precision | single \| double      | specifiy 32 bit or 64 bit output precision               |
 | --outdir    | <path/to/dir> | set dir where ILDG lattice will be written               |

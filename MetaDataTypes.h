@@ -208,12 +208,13 @@ void writeIldgMDCFile(ildgMDC mdc_obj, nerscProvFormat prov_header) {
 
 }
 
-
+/////////////////////////////////////////////////////////
 // fill in the provenance metadata
 // NerscIO::readHeader strips all whitespace.
 // This causes issues with dates so 
 // we copy the relevant code here and modify it
 // to only trim the leading whitespace.
+/////////////////////////////////////////////////////////
 nerscProvFormat ProvHeader(std::string file)
 {
   nerscProvFormat nerscProvFormat_;
@@ -251,6 +252,41 @@ nerscProvFormat ProvHeader(std::string file)
   nerscProvFormat_.original_archive_date     = header["ARCHIVE_DATE"];
 
   return nerscProvFormat_;
+}
+
+std::vector<int> getNerscLattDims(std::string file)
+{
+  std::vector<int> dims(4);
+  std::map<std::string,std::string> header;
+  std::string line;
+
+  std::ifstream fin(file);
+
+  getline(fin,line); // read one line
+
+  removeWhitespace(line);
+
+  assert(line==std::string("BEGIN_HEADER"));
+
+  do {
+    getline(fin,line); // read one line
+    int eq = line.find("=");
+    if(eq > 0) {
+      std::string key=line.substr(0,eq);
+      std::string val=line.substr(eq+1);
+      removeWhitespace(key);
+      // remove leading whitespace in val
+      val.erase(0, val.find_first_not_of(' '));
+      header[key] = val;
+    }
+  } while( line.find("END_HEADER") == std::string::npos );
+
+  dims[0] = std::stol(header["DIMENSION_1"]);
+  dims[1] = std::stol(header["DIMENSION_2"]);
+  dims[2] = std::stol(header["DIMENSION_3"]);
+  dims[3] = std::stol(header["DIMENSION_4"]);
+
+  return dims;
 }
 
 NAMESPACE_END(Grid);
