@@ -118,12 +118,11 @@ int main (int argc, char ** argv)
   }
 
   // default to double precision
-  int precision;
+  std::string precision;
   if ( GridCmdOptionExists(argv, argv+argc, "--precision") ) {
-    std::string arg = GridCmdOptionPayload(argv, argv+argc, "--precision");
-    GridCmdOptionInt(arg, precision);
-    assert(precision==32 || precision==64);
-  } else { precision = 64; }
+    precision = GridCmdOptionPayload(argv, argv+argc, "--precision");
+    assert(precision=="single" || precision=="double");
+  } else { precision = "double"; }
 
   std::string suffix = ".ildg";
   std::string ildg_file;
@@ -145,7 +144,6 @@ int main (int argc, char ** argv)
   GridCartesian     Grid(latt_size,simd_layout,mpi_layout);
 
   LatticeGaugeField Umu_nersc(&Grid);
-  //Umu_nersc = Umu_ildg = Zero();
   
   std::string nersc_file(argv[1]);
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
@@ -157,7 +155,7 @@ int main (int argc, char ** argv)
   uint32_t crc32_csum;
 
   // exit if user-defined precision is double and the nersc lattice is single
-  if( nersc_header.floating_point=="IEEE32BIG" && precision==64 ) {
+  if( nersc_header.floating_point=="IEEE32BIG" && precision=="double" ) {
     std::cout << GridLogError << 
     "--precision must be <= nersc precision" << std::endl;
     exit(0);
@@ -166,7 +164,7 @@ int main (int argc, char ** argv)
   // use command line options to write mdc file
   ildgMDC mdc_info = gatherGridCmdOptions(argc, argv);
 
-  mdc_info.gauge_precision = (precision==32) ? "single" : "double";
+  mdc_info.gauge_precision = precision;
   mdc_info.markov_update   = nersc_header.sequence_number;
   mdc_info.markov_plaq     = nersc_header.plaquette;
   // convert group name to lowercase letters
@@ -182,22 +180,22 @@ int main (int argc, char ** argv)
   // decide which template instantiation of writeConfiguration to call
   // 8 options from {SU,SP} x {FULL,REDUCED} x {single,double}
   if (grp_arg == "SU") {
-    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==32 ) {
+    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="single" ) {
       std::cout<<GridLogMessage<< "Writing reduced format SU(fp32) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::SU,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::SU,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     } 
-    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==64 ) {
+    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="double" ) {
       std::cout<<GridLogMessage<< "Writing reduced format SU(fp64) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::SU,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::SU,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     }
-    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==32 ) {
+    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="single" ) {
       std::cout<<GridLogMessage<< "Writing non-reduced format SU(fp32) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::SU,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::SU,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     } 
-    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==64 ) {
+    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="double" ) {
       std::cout<<GridLogMessage<< "Writing non-reduced format SU(fp64) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::SU,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::SU,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
@@ -205,22 +203,22 @@ int main (int argc, char ** argv)
   }
 
   if (grp_arg == "Sp") {
-    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==32 ) {
+    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="single" ) {
       std::cout<<GridLogMessage<< "Writing reduced format Sp(fp32) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::Sp,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::Sp,MatrixFormat::REDUCED,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     } 
-    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==64 ) {
+    if( GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="double" ) {
       std::cout<<GridLogMessage<< "Writing reduced format Sp(fp64) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::Sp,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::Sp,MatrixFormat::REDUCED,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     }
-    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==32 ) {
+    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="single" ) {
       std::cout<<GridLogMessage<< "Writing non-reduced format Sp(fp32) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::Sp,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::Sp,MatrixFormat::FULL,FloatingPointFormat::IEEE32BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     } 
-    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision==64 ) {
+    if( !GridCmdOptionExists(argv, argv+argc, "--reduce") && precision=="double" ) {
       std::cout<<GridLogMessage<< "Writing non-reduced format Sp(fp64) ILDG lattice" << std::endl;
       crc32_csum = posixCRC<GroupName::Sp,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc);
       writeIldgConfiguration<stats,GroupName::Sp,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
