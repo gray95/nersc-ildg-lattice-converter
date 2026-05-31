@@ -34,7 +34,14 @@ See the full license in the file "LICENSE" in the top level distribution directo
 #include "crc32.h"
 using namespace Grid;
 
-
+////////////////////////////////////////////////////////////
+// computes the 32 bit CRC of the payload, meaning
+// after mungeing and accounting for endianness, 
+// using the functions provided by crc32.h. 
+// Note: the zlib crc32 algorithm that Grid uses is not
+// the same as the one used by the gnu cksum utility that
+// the ILDG Metadata Working Group adopted.
+//////////////////////////////////////////////////////////// 
 template<class gaugeGroup, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt, class vobj>
 uint32_t posixCRC(const Lattice<vobj> &buf)
 {
