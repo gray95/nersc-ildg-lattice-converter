@@ -31,51 +31,7 @@ See the full license in the file "LICENSE" in the top level distribution directo
 
 #include <Grid/Grid.h>
 #include "MetaDataTypes.h"
-#include "crc32.h"
 using namespace Grid;
-
-////////////////////////////////////////////////////////////
-// computes the 32 bit CRC of the payload, meaning
-// after mungeing and accounting for endianness, 
-// using the functions provided by crc32.h. 
-// Note: the zlib crc32 algorithm that Grid uses is not
-// the same as the one used by the gnu cksum utility that
-// the ILDG Metadata Working Group adopted.
-//////////////////////////////////////////////////////////// 
-template<class gaugeGroup, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt, class vobj>
-uint32_t posixCRC(const Lattice<vobj> &buf)
-{
-  using sobj = typename vobj::scalar_object;
-  typedef typename GaugeUnMunger<vobj, gaugeGroup, matrix_fmt, fp_fmt>::out_type fobj; 
-
-  GridBase *grid = buf.Grid();
-  uint64_t lsites = grid->lSites();
-
-  std::vector<sobj> sdata(lsites);
-  std::vector<fobj> iodata(lsites);
-
-  unvectorizeToLexOrdArray(sdata, buf);
-
-  GaugeUnMunger<vobj,gaugeGroup,matrix_fmt,fp_fmt> munge;
-
-  thread_for( x, lsites, { munge(sdata[x],iodata[x]); } );
-
-  //grid->Barrier();
-
-  if (fp_fmt==FloatingPointFormat::IEEE32BIG) {
-    BinaryIO::htobe32_v((void *)&iodata[0], sizeof(fobj)*iodata.size());
-  }
-  if (fp_fmt==FloatingPointFormat::IEEE64BIG) {
-    BinaryIO::htobe64_v((void *)&iodata[0], sizeof(fobj)*iodata.size());
-  }
-
-  crc32init(); 
-
-  crc32append( (unsigned char*) &iodata[0], sizeof(fobj)*iodata.size() );
-
-  return crc32finish();
-}
-
 
 ///////////////////////////////////////////////////////////////
 // this template function generates writes a lattice
@@ -142,7 +98,6 @@ int main (int argc, char ** argv)
     ildg_file = argv[1]+suffix;
   }
  
-  using stats = PeriodicGaugeStatistics;
 
   std::string nersc_file(argv[1]);
   std::vector<int> latt_dims = getNerscLattDims( nersc_file );
@@ -160,8 +115,6 @@ int main (int argc, char ** argv)
   std::cout <<GridLogMessage<<"**************************"<<std::endl;
   FieldMetaData nersc_header;
   NerscIO::readConfiguration(Umu_nersc, nersc_header, nersc_file);
-
-  uint32_t crc32_csum;
 
   // exit if user-defined precision is double and the nersc lattice is single
   if( nersc_header.floating_point=="IEEE32BIG" && precision=="double" ) {
@@ -182,10 +135,8 @@ int main (int argc, char ** argv)
   mdc_info.markov_field    = stGrp + std::to_string(Nc) + "gauge";
   mdc_info.filename = ildg_file + std::string(".xml");
 
-  // write in xml format.
-  nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
-  writeIldgMDCFile(mdc_info, nersc_prov_header);
-
+  using stats = PeriodicGaugeStatistics;
+  uint32_t crc32_csum;
   // decide which template instantiation of writeConfiguration to call
   // 8 options from {SU,SP} x {FULL,REDUCED} x {single,double}
   if (grp_arg == "SU") {
@@ -233,7 +184,9 @@ int main (int argc, char ** argv)
       writeIldgConfiguration<stats,GroupName::Sp,MatrixFormat::FULL,FloatingPointFormat::IEEE64BIG>(Umu_nersc, Grid, nersc_header, ildg_file, nersc_file);
     }
   }
+
   // write mdc xml file
+  nerscProvFormat nersc_prov_header = ProvHeader(nersc_file);
   mdc_info.markov_crc_csum = crc32_csum;
   writeIldgMDCFile(mdc_info, nersc_prov_header);
 

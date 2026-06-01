@@ -25,15 +25,11 @@ directory
 *************************************************************************************/
          /*  END LEGAL */
 
+#include "crc32.h"
 NAMESPACE_BEGIN(Grid);
 
-//nerscProvFormat ProvHeader(std::string file);
-//ildgMDC gatherGridCmdOptions(int argc, char ** argv);
-//void writeIldgMDCFile(std::string outfile, ildgMDC mdc_obj, nerscProvFormat prov_header);
-
-/////////////////////////
-// ILDG MDC file format
-/////////////////////////
+// function declarations
+std::map<std::string,std::string> parseNerscHeader( std::string file );
 
 /////////////////////////////
 // Provenance record format
@@ -203,60 +199,19 @@ void writeIldgMDCFile(ildgMDC mdc_obj, nerscProvFormat prov_header) {
   rec_node.append_child("avePlaquette").text().set( mdc_obj.markov_plaq );
 
   // write out xml file
-  std::cout << GridLogMessage << "Saving ILDG MDC file..." << 
+  std::cout << GridLogMessage << "Writing ILDG MDC file..." << 
     mdc_file.save_file(mdc_obj.filename.c_str()) << std::endl;
 
 }
 
 /////////////////////////////////////////////////////////
-// fill in the provenance metadata
 // NerscIO::readHeader strips all whitespace.
 // This causes issues with dates so 
 // we copy the relevant code here and modify it
 // to only trim the leading whitespace.
 /////////////////////////////////////////////////////////
-nerscProvFormat ProvHeader(std::string file)
+std::map<std::string,std::string> parseNerscHeader( std::string file )
 {
-  nerscProvFormat nerscProvFormat_;
-
-  std::map<std::string,std::string> header;
-  std::string line;
-
-  // read the nersc header to get provenance info
-  std::ifstream fin(file);
-
-  getline(fin,line); // read one line 
-
-  removeWhitespace(line);
-
-  assert(line==std::string("BEGIN_HEADER"));
-
-  do {
-    getline(fin,line); // read one line
-    int eq = line.find("=");
-    if(eq > 0) {
-      std::string key=line.substr(0,eq);
-      std::string val=line.substr(eq+1);
-      removeWhitespace(key);
-      // remove leading whitespace in val
-      val.erase(0, val.find_first_not_of(' '));
-      header[key] = val;
-    }
-  } while( line.find("END_HEADER") == std::string::npos );
-
-  // write provenance data into header
-  nerscProvFormat_.original_format           = "NERSC";
-  nerscProvFormat_.original_creator          = header["CREATOR"];
-  nerscProvFormat_.original_creator_hardware = header["CREATOR_HARDWARE"];
-  nerscProvFormat_.original_creation_date    = header["CREATION_DATE"];
-  nerscProvFormat_.original_archive_date     = header["ARCHIVE_DATE"];
-
-  return nerscProvFormat_;
-}
-
-std::vector<int> getNerscLattDims(std::string file)
-{
-  std::vector<int> dims(4);
   std::map<std::string,std::string> header;
   std::string line;
 
@@ -281,12 +236,77 @@ std::vector<int> getNerscLattDims(std::string file)
     }
   } while( line.find("END_HEADER") == std::string::npos );
 
+  return header;
+}
+
+nerscProvFormat ProvHeader(std::string file)
+{
+  std::map<std::string,std::string> header = parseNerscHeader(file);
+
+  nerscProvFormat nerscProvFormat_;
+
+  // write provenance data into header
+  nerscProvFormat_.original_format           = "NERSC";
+  nerscProvFormat_.original_creator          = header["CREATOR"];
+  nerscProvFormat_.original_creator_hardware = header["CREATOR_HARDWARE"];
+  nerscProvFormat_.original_creation_date    = header["CREATION_DATE"];
+  nerscProvFormat_.original_archive_date     = header["ARCHIVE_DATE"];
+
+  return nerscProvFormat_;
+}
+
+std::vector<int> getNerscLattDims(std::string file)
+{
+  std::map<std::string,std::string> header = parseNerscHeader(file);
+  
+  std::vector<int> dims(4);
+
   dims[0] = std::stol(header["DIMENSION_1"]);
   dims[1] = std::stol(header["DIMENSION_2"]);
   dims[2] = std::stol(header["DIMENSION_3"]);
   dims[3] = std::stol(header["DIMENSION_4"]);
 
   return dims;
+}
+
+////////////////////////////////////////////////////////////
+// computes the 32 bit CRC of the payload, meaning
+// after mungeing and accounting for endianness, 
+// using the functions provided by crc32.h. 
+// Note: the zlib crc32 algorithm that Grid uses is not
+// the same as the one used by the gnu cksum utility that
+// the ILDG Metadata Working Group adopted.
+//////////////////////////////////////////////////////////// 
+template<class gaugeGroup, MatrixFormat matrix_fmt, FloatingPointFormat fp_fmt, class vobj>
+uint32_t posixCRC(const Lattice<vobj> &buf)
+{
+  using sobj = typename vobj::scalar_object;
+  typedef typename GaugeUnMunger<vobj, gaugeGroup, matrix_fmt, fp_fmt>::out_type fobj; 
+
+  GridBase *grid = buf.Grid();
+  uint64_t lsites = grid->lSites();
+
+  std::vector<sobj> sdata(lsites);
+  std::vector<fobj> iodata(lsites);
+
+  unvectorizeToLexOrdArray(sdata, buf);
+
+  GaugeUnMunger<vobj,gaugeGroup,matrix_fmt,fp_fmt> munge;
+
+  thread_for( x, lsites, { munge(sdata[x],iodata[x]); } );
+
+  if (fp_fmt==FloatingPointFormat::IEEE32BIG) {
+    BinaryIO::htobe32_v((void *)&iodata[0], sizeof(fobj)*iodata.size());
+  }
+  if (fp_fmt==FloatingPointFormat::IEEE64BIG) {
+    BinaryIO::htobe64_v((void *)&iodata[0], sizeof(fobj)*iodata.size());
+  }
+
+  crc32init(); 
+
+  crc32append( (unsigned char*) &iodata[0], sizeof(fobj)*iodata.size() );
+
+  return crc32finish();
 }
 
 NAMESPACE_END(Grid);
