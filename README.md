@@ -3,19 +3,19 @@
 This repo hosts a small `Grid` programme that can read Nersc format lattices and write them out in _reduced_ ILDG format while conforming to the ILDG's most recent [Binary Spec](https://www-zeuthen.desy.de/apewww/ILDG/specifications/ildg-file-format-1.2.pdf). If you have a large number of disk-heavy Nersc configurations lying about it could be useful in alleviating your storage requirements. This programme also generates an ILDG MDC file that records important information about the generated lattice.
 
 ## Building 
-Ensure you have `make install`-ed `Grid` __beforehand__ and pass its install prefix to `--with-grid`. Currently only the [telos fork](https://github.com/telos-collaboration/Grid) of `Grid` supports writing reduced format ILDG Lattices.
+Ensure you have `make install` -ed `Grid` __beforehand__ and pass its install prefix to `--with-grid`. Currently only the [telos fork](https://github.com/telos-collaboration/Grid) of `Grid` supports writing reduced format ILDG Lattices.
 
 ```
 ./bootstrap
 mkdir build; cd build
-../configure --with-grid=<path/to/grid> <other config options>
+../configure --with-grid=<path/to/grid> [other options (CXX,CXXFLAGS etc.)]
 make
 ```
 
 ## Running
-The core program resides in `NerscToIldgConverter.cpp`. Once compiled against `Grid` run it using
+The core program resides in `src/NerscToIldgConverter.cpp`. Once compiled against run it using
 
-`./NameOfApplication <path-to-nersc-lattice> [grid-options] [mdc-options]`
+`./nersc_to_ildg_converter <path-to-nersc-lattice> [grid-options] [mdc-options]`
 
 The provided `run-lattice-converter.sh` is a useful starting point. 
 
@@ -52,17 +52,15 @@ The resulting mdc file can be checked against the QCDml 2.0 schema using a valid
 
 ### Notes
 
-- I have found that `autotools` doesn't like `NameOfApplication`s with dashes in them. Probably best to use underscores.
- 
-- If you add new `.cpp` files, don't forget to add them to `Makefile.am`.
+- The value of `Nc` is fixed per build. If you want to shrink Sp(4) and SU(3) lattices you need to build two separate programmes, one with `../configure --with-grid=<path-to-grid-compiled-with-Nc=3>` and the other with `../configure --with-grid=<path-to-grid-compiled-with-Nc=4>`.
 
-- The value of `Nc` is fixed. If you want to shrink Sp(4) and SU(3) lattices you need to build two separate programmes, one with `../configure --with-grid=<path-to-grid-compiled-with-Nc=3>` and the other with `../configure --with-grid=<path-to-grid-compiled-with-Nc=4>`.
+- Avoid empty `--mdc-*` args and use double quotes.
 
-- Avoid empty mdc cmdline args and use double quotes.
+- I'd recommend placing, if used, `--reduce` and `--check` as the last arguments in the list of args to `nersc_to_ildg_converter`.
 
 - Sp(2) is the same as SU(2), as a convention we use `--group SU` when processing these lattices. Some of the ildg binary checker tools don't like reduced Sp(2) fields. 
 
-- Sp(2N) is a subgroup of SU(2N), so if `Grid` writes a reduced Sp(2N) lattice thinking it is SU(2N) then it will work fine, `Grid` will be able to read and reconstruct the lattice without any extra prompting. But you just won't get the full space savings - for Sp(4) you would lose out on 50% of the potential saved disk space.
+- Sp(2N) is a subgroup of SU(2N), so if `Grid` writes a reduced Sp(2N) lattice thinking it is SU(2N) this is not an irretrievable loss, `Grid` will be able to read and reconstruct the lattice without any extra prompting. You just won't get the full space savings - for Sp(4) you would lose out on 50% of the potential saved disk space - and the metadata will be incorrect.
 
 ### To Do 
 - [x] Add a  `--group` option to specify the gauge group (SU or Sp for now).
