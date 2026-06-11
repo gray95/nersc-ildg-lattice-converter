@@ -8,10 +8,12 @@ CODE_DATE=$(date --iso-8601=seconds)
 
 NERSC_CFG="<path-to-nersc-lattice-cfg>"
 
+ILDG_DIR="<path-to-converted-lattices-dir>"
+
 ./nersc_to_ildg_converter $NERSC_CFG \
                           --group Sp \
                           --precision single \
-                          --outdir converted-lattices \
+                          --outdir $ILDG_DIR \
                           --mdc-data-lfn "lfn://path/to/ildg-loc" \
                           --mdc-rev-action generate \
                           --mdc-part-orcid 0000-0000-0000-1234 \
